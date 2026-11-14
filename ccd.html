@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>معمارية حساس CCD: الإزاحة الرأسية والأفقية ونبضات القيادة</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #060913;
+            color: #e2e8f0;
+        }
+        .font-mono-tech {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-cyan-500 selection:text-slate-950">
+
+    <!-- Top Navigation & Controls Header -->
+    <header class="bg-slate-900/90 border-b border-slate-800 px-6 py-3.5 sticky top-0 z-20 backdrop-blur-md shadow-xl">
+        <div class="max-w-[1440px] mx-auto flex flex-col lg:flex-row justify-between items-center gap-4">
+            <!-- Title -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-xl shadow-inner">
+                    🎛️
+                </div>
+                <div>
+                    <h1 class="text-lg md:text-xl font-black text-white tracking-tight">
+                        المخطط المعماري لحساس <span class="text-cyan-400">CCD</span> ومسجلات الإزاحة
+                    </h1>
+                    <p class="text-xs text-slate-400">منظور علوي (Top-Down) لشبكة البكسلات، البوابات الثلاثية، وخطوط نبضات القيادة</p>
+                </div>
+            </div>
+
+            <!-- Interactive Controls -->
+            <div class="flex flex-wrap items-center justify-center gap-2.5">
+                <button id="playPauseBtn" class="bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold px-4 py-2 rounded-xl shadow-lg shadow-cyan-500/20 transition flex items-center gap-2 text-sm cursor-pointer">
+                    <span id="playIcon">⏸️</span>
+                    <span id="playText">إيقاف مؤقت</span>
+                </button>
+
+                <button id="stepBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-100 font-semibold px-4 py-2 rounded-xl border border-slate-700 transition flex items-center gap-1.5 text-sm cursor-pointer">
+                    <span>خطوة واحدة</span>
+                    <span class="text-cyan-400">⏭️</span>
+                </button>
+
+                <button id="resetBtn" class="bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 font-semibold px-4 py-2 rounded-xl border border-amber-500/30 transition flex items-center gap-1.5 text-sm cursor-pointer">
+                    <span>إعادة التقاط الصورة</span>
+                    <span>📸</span>
+                </button>
+
+                <!-- Speed Control -->
+                <div class="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 mr-1">
+                    <span class="text-xs text-slate-400 font-semibold">السرعة:</span>
+                    <input id="speedSlider" type="range" min="1" max="5" value="2" class="w-20 accent-cyan-400 cursor-pointer">
+                    <span id="speedLabel" class="text-xs font-bold text-cyan-400 w-10 text-center">متوسط</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Live Status Banner -->
+    <div class="bg-slate-900/60 border-b border-slate-800/80 px-6 py-2.5">
+        <div class="max-w-[1440px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5">
+                <span id="phaseBadge" class="px-2.5 py-0.5 rounded-md text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                    التعرض الضوئي
+                </span>
+                <p id="liveBannerText" class="text-sm font-bold text-slate-100">
+                    تم التقاط الصورة وتخزين حزم الإلكترونات تحت بوابات Vφ1 (+5V)
+                </p>
+            </div>
+            <div class="text-xs text-slate-400 font-mono-tech flex items-center gap-4">
+                <span>السطر المقروء: <strong id="rowsReadCount" class="text-emerald-400">0 / 4</strong></span>
+                <span>البكسلات المحولة رقمياً: <strong id="pixelsReadCount" class="text-amber-400">0 / 16</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 max-w-[1440px] w-full mx-auto p-4 md:p-6 grid grid-cols-1 xl:grid-cols-12 gap-6">
+        
+        <!-- Interactive Schematic Canvas (9 Columns) -->
+        <div class="xl:col-span-9 bg-slate-900/70 border border-slate-800 rounded-2xl p-3 flex flex-col shadow-2xl relative">
+            <div class="flex-1 relative bg-[#050811] rounded-xl border border-slate-800/90 overflow-hidden min-h-[560px]">
+                <canvas id="chipCanvas" class="w-full h-full block"></canvas>
+            </div>
+            
+            <!-- Schematic Legend Bar -->
+            <div class="mt-3 pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-4 px-2 text-xs text-slate-400">
+                <div class="flex flex-wrap items-center gap-4">
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-sm bg-cyan-400 shadow-[0_0_8px_#22d3ee]"></span>
+                        بوابة نشطة (+5V بئر جهدي عميق)
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-sm bg-slate-800 border border-slate-700"></span>
+                        بوابة حاجزة (0V جهد منخفض)
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]"></span>
+                        حزمة إلكترونات (شحنة البكسل)
+                    </span>
+                </div>
+                <span class="text-slate-500">ملاحظة: الأرقام داخل الحزم تمثل شدة الإضاءة (عدد الإلكترونات النسبي)</span>
+            </div>
+        </div>
+
+        <!-- Right Telemetry & Digital Readout Panel (3 Columns) -->
+        <div class="xl:col-span-3 flex flex-col gap-5">
+            
+            <!-- Live Clock Bus Voltages -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-xl">
+                <h2 class="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2 border-b border-slate-800 pb-2">
+                    <span>⚡</span> جهود خطوط القيادة (Clock Buses)
+                </h2>
+                
+                <!-- Vertical Clocks -->
+                <div class="mb-4">
+                    <div class="text-xs font-semibold text-cyan-400 mb-2">1. خطوط الإزاحة الرأسية (V-CCD):</div>
+                    <div class="grid grid-cols-3 gap-2 text-center font-mono-tech">
+                        <div id="card-v1" class="p-2 rounded-xl border border-slate-800 bg-slate-950 transition-all">
+                            <div class="text-xs text-slate-400">Vφ1</div>
+                            <div id="val-v1" class="text-sm font-bold mt-0.5 text-cyan-400">+5V</div>
+                        </div>
+                        <div id="card-v2" class="p-2 rounded-xl border border-slate-800 bg-slate-950 transition-all">
+                            <div class="text-xs text-slate-400">Vφ2</div>
+                            <div id="val-v2" class="text-sm font-bold mt-0.5 text-slate-500">0V</div>
+                        </div>
+                        <div id="card-v3" class="p-2 rounded-xl border border-slate-800 bg-slate-950 transition-all">
+                            <div class="text-xs text-slate-400">Vφ3</div>
+                            <div id="val-v3" class="text-sm font-bold mt-0.5 text-slate-500">0V</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Horizontal Clocks -->
+                <div>
+                    <div class="text-xs font-semibold text-amber-400 mb-2">2. خطوط الإزاحة الأفقية (H-CCD):</div>
+                    <div class="grid grid-cols-3 gap-2 text-center font-mono-tech">
+                        <div id="card-h1" class="p-2 rounded-xl border border-slate-800 bg-slate-950 transition-all">
+                            <div class="text-xs text-slate-400">Hφ1</div>
+                            <div id="val-h1" class="text-sm font-bold mt-0.5 text-amber-400">+5V</div>
+                        </div>
+                        <div id="card-h2" class="p-2 rounded-xl border border-slate-800 bg-slate-950 transition-all">
+                            <div class="text-xs text-slate-400">Hφ2</div>
+                            <div id="val-h2" class="text-sm font-bold mt-0.5 text-slate-500">0V</div>
+                        </div>
+                        <div id="card-h3" class="p-2 rounded-xl border border-slate-800 bg-slate-950 transition-all">
+                            <div class="text-xs text-slate-400">Hφ3</div>
+                            <div id="val-h3" class="text-sm font-bold mt-0.5 text-slate-500">0V</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reconstructed Digital Image Buffer -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-xl flex-1 flex flex-col">
+                <div class="flex justify-between items-center mb-3 border-b border-slate-800 pb-2">
+                    <h2 class="text-sm font-bold text-emerald-400 flex items-center gap-1.5">
+                        <span>🖥️</span> الصورة الرقمية المسترجعة (ADC)
+                    </h2>
+                    <span class="text-[11px] font-mono-tech text-slate-400">8-Bit Out</span>
+                </div>
+                
+                <p class="text-xs text-slate-400 mb-3 leading-relaxed">
+                    كل شحنة تصل إلى <strong class="text-slate-200">مضخم الخروج</strong> تُقاس وتُحول لقيمة رقمية (0–255) لبناء الصورة النهائية سطراً بسطر:
+                </p>
+
+                <!-- 4x4 Reconstructed Grid -->
+                <div id="digitalGrid" class="grid grid-cols-4 gap-1.5 bg-slate-950 p-2.5 rounded-xl border border-slate-800 aspect-square max-w-[230px] w-full mx-auto my-auto">
+                    <!-- Populated via JS -->
+                </div>
+
+                <!-- Serial Output Stream Log -->
+                <div class="mt-3 pt-2 border-t border-slate-800/80">
+                    <div class="text-[11px] text-slate-400 mb-1">آخر قيمة خرجت من محول ADC:</div>
+                    <div id="lastAdcReadout" class="bg-slate-950 px-3 py-2 rounded-lg border border-slate-800 font-mono-tech text-xs text-emerald-400 flex justify-between">
+                        <span>في انتظار الإزاحة...</span>
+                        <span>---</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        const canvas = document.getElementById('chipCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Simulation Configuration
+        const ROWS = 4;
+        const COLS = 4;
+        const SUBGATES = 3; // phi1, phi2, phi3
+
+        // State Variables
+        let isPlaying = true;
+        let speedLevel = 2;
+        let lastTickTime = 0;
+
+        // Clock states: 0 = phi1 (+5V), 1 = phi2 (+5V), 2 = phi3 (+5V)
+        let vClockActive = 0; // Vφ1, Vφ2, Vφ3
+        let hClockActive = 0; // Hφ1, Hφ2, Hφ3
+
+        // Charge Packets Array:
+        // Each packet: { id, r, c, subGate (0..2), value (40..255), inHorizontal: bool, targetX, targetY, currX, currY }
+        let packets = [];
+        let reconstructedPixels = Array(ROWS * COLS).fill(null);
+
+        // State Machine for Readout Sequence
+        // Modes: 'EXPOSE', 'V_SHIFT', 'H_SHIFT', 'COMPLETE'
+        let mode = 'EXPOSE';
+        let subStepCounter = 0;
+        let rowsProcessed = 0;
+        let hShiftsInCurrentRow = 0;
+        let statusMessage = 'مرحلة تجميع الفوتونات: البوابة Vφ1 (+5V) تحتجز الشحنات داخل كل بكسل.';
+        let phaseTitle = 'التقاط الصورة';
+
+        // Initial Capturing Pattern (Distinct recognizable gradient/object pattern)
+        const sampleImagePattern = [
+            [45,  85,  130, 70],
+            [95,  220, 245, 110],
+            [120, 250, 235, 140],
+            [60,  150, 180, 90]
+        ];
+
+        function initSimulation() {
+            packets = [];
+            reconstructedPixels = Array(ROWS * COLS).fill(null);
+            vClockActive = 0;
+            hClockActive = 0;
+            mode = 'EXPOSE';
+            subStepCounter = 0;
+            rowsProcessed = 0;
+            hShiftsInCurrentRow = 0;
+            phaseTitle = '1. تجميع الشحنات';
+            statusMessage = 'تم التعرض للضوء: البوابات Vφ1 (+5V) نشطة وتحتجز الإلكترونات في مواقع البكسلات.';
+
+            // Create initial packets in the 4x4 grid at subGate 0 (Vφ1)
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    packets.push({
+                        origR: r,
+                        origC: c,
+                        r: r,
+                        c: c,
+                        subGate: 0, // 0: phi1, 1: phi2, 2: phi3
+                        value: sampleImagePattern[r][c],
+                        inHorizontal: false,
+                        visualR: r,
+                        visualC: c,
+                        visualSub: 0
+                    });
+                }
+            }
+            updateUI();
+        }
+
+        // Advance one exact clock transition step
+        function stepSimulation() {
+            if (mode === 'COMPLETE') {
+                return;
+            }
+
+            if (mode === 'EXPOSE') {
+                // Start Vertical Shift of the whole matrix down by 1 row
+                mode = 'V_SHIFT';
+                subStepCounter = 0;
+                advanceVerticalSubStep();
+                return;
+            }
+
+            if (mode === 'V_SHIFT') {
+                advanceVerticalSubStep();
+                return;
+            }
+
+            if (mode === 'H_SHIFT') {
+                advanceHorizontalSubStep();
+                return;
+            }
+        }
+
+        function advanceVerticalSubStep() {
+            phaseTitle = '2. الإزاحة الرأسية (V-CCD)';
+            // Hold Hφ1 at +5V ready to receive the bottom row
+            hClockActive = 0;
+
+            if (subStepCounter === 0) {
+                // Vφ1 -> Vφ2 (+5V)
+                vClockActive = 1;
+                packets.forEach(p => {
+                    if (!p.inHorizontal) p.subGate = 1;
+                });
+                statusMessage = 'نبضة الساعة الرأسية Vφ2 = +5V : انزلاق جميع الشحنات لأسفل نحو البوابة الوسطى داخل كل بكسل.';
+                subStepCounter++;
+            } else if (subStepCounter === 1) {
+                // Vφ2 -> Vφ3 (+5V)
+                vClockActive = 2;
+                packets.forEach(p => {
+                    if (!p.inHorizontal) p.subGate = 2;
+                });
+                statusMessage = 'نبضة الساعة الرأسية Vφ3 = +5V : الشحنات تصل للحافة السفلية لكل بكسل استعداداً لعبور الفاصل.';
+                subStepCounter++;
+            } else if (subStepCounter === 2) {
+                // Vφ3 -> Vφ1 (+5V), Row shifts down by 1! Bottom row drops into H-CCD (Hφ1 = +5V)
+                vClockActive = 0;
+                packets.forEach(p => {
+                    if (!p.inHorizontal) {
+                        p.r += 1;
+                        p.subGate = 0;
+                        if (p.r >= ROWS) {
+                            // Dropped into Horizontal Register!
+                            p.inHorizontal = true;
+                            p.subGate = 0; // Lands on Hφ1 (+5V)
+                        }
+                    }
+                });
+                statusMessage = 'نبضة الساعة الرأسية Vφ1 = +5V : سقط السطر السفلي بالكامل داخل مسجل الإزاحة الأفقية (H-CCD)!';
+                
+                // Switch to Horizontal Shift mode to empty the H-CCD register
+                mode = 'H_SHIFT';
+                subStepCounter = 0;
+                hShiftsInCurrentRow = 0;
+            }
+            updateUI();
+        }
+
+        function advanceHorizontalSubStep() {
+            phaseTitle = '3. الإزاحة الأفقية (H-CCD)';
+            // Keep Vφ1 = +5V to hold remaining rows safely in place
+            vClockActive = 0;
+
+            if (subStepCounter === 0) {
+                // Hφ1 -> Hφ2 (+5V)
+                hClockActive = 1;
+                packets.forEach(p => {
+                    if (p.inHorizontal) p.subGate = 1;
+                });
+                statusMessage = 'نبضة الساعة الأفقية Hφ2 = +5V : تحريك سطر الشحنات أفقياً لليمين داخل المسجل السفلي.';
+                subStepCounter++;
+            } else if (subStepCounter === 1) {
+                // Hφ2 -> Hφ3 (+5V)
+                hClockActive = 2;
+                packets.forEach(p => {
+                    if (p.inHorizontal) p.subGate = 2;
+                });
+                statusMessage = 'نبضة الساعة الأفقية Hφ3 = +5V : اقتراب الشحنة اليمنى من بوابة مضخم الخروج (Output Node).';
+                subStepCounter++;
+            } else if (subStepCounter === 2) {
+                // Hφ3 -> Hφ1 (+5V) -> Shift column right by 1! Rightmost packet exits to Output Amplifier & ADC
+                hClockActive = 0;
+                let exitedPacket = null;
+
+                packets.forEach(p => {
+                    if (p.inHorizontal) {
+                        p.c += 1;
+                        p.subGate = 0;
+                        if (p.c >= COLS) {
+                            exitedPacket = p;
+                        }
+                    }
+                });
+
+                if (exitedPacket) {
+                    // Remove from active packets and store in digital buffer
+                    packets = packets.filter(p => p !== exitedPacket);
+                    const flatIndex = exitedPacket.origR * COLS + exitedPacket.origC;
+                    reconstructedPixels[flatIndex] = exitedPacket.value;
+
+                    const binaryStr = exitedPacket.value.toString(2).padStart(8, '0');
+                    document.getElementById('lastAdcReadout').innerHTML = `
+                        <span>بكسل (${exitedPacket.origR + 1},${exitedPacket.origC + 1}) = <strong>${exitedPacket.value}</strong></span>
+                        <span class="text-slate-400">${binaryStr}</span>
+                    `;
+                    statusMessage = `تفريغ البكسل (${exitedPacket.origR + 1},${exitedPacket.origC + 1}) إلى مضخم الخروج وتحويله رقمياً (${exitedPacket.value})!`;
+                }
+
+                hShiftsInCurrentRow++;
+                subStepCounter = 0;
+
+                // Check if all 4 pixels in H-CCD have been shifted out
+                if (hShiftsInCurrentRow >= COLS) {
+                    rowsProcessed++;
+                    if (rowsProcessed >= ROWS) {
+                        mode = 'COMPLETE';
+                        phaseTitle = 'اكتملت القراءة';
+                        statusMessage = 'اكتمل تفريغ جميع الأسطر الأربعة وتحويل الصورة بالكامل! اضغط "إعادة التقاط الصورة" للتكرار.';
+                    } else {
+                        // Ready to pull the next row down
+                        mode = 'V_SHIFT';
+                        subStepCounter = 0;
+                    }
+                }
+            }
+            updateUI();
+        }
+
+        // Update DOM Telemetry & Digital Grid
+        function updateUI() {
+            document.getElementById('phaseBadge').textContent = phaseTitle;
+            document.getElementById('liveBannerText').textContent = statusMessage;
+
+            const readCount = reconstructedPixels.filter(v => v !== null).length;
+            document.getElementById('rowsReadCount').textContent = `${rowsProcessed} / ${ROWS}`;
+            document.getElementById('pixelsReadCount').textContent = `${readCount} / ${ROWS * COLS}`;
+
+            // Update Clock Cards
+            for (let i = 0; i < 3; i++) {
+                // V Clocks
+                const vCard = document.getElementById(`card-v${i + 1}`);
+                const vVal = document.getElementById(`val-v${i + 1}`);
+                if (vClockActive === i && mode !== 'COMPLETE') {
+                    vCard.className = 'p-2 rounded-xl border border-cyan-400 bg-cyan-950/60 shadow-[0_0_12px_rgba(34,211,238,0.25)] transition-all';
+                    vVal.textContent = '+5V';
+                    vVal.className = 'text-sm font-bold mt-0.5 text-cyan-300';
+                } else {
+                    vCard.className = 'p-2 rounded-xl border border-slate-800 bg-slate-950 transition-all';
+                    vVal.textContent = '0V';
+                    vVal.className = 'text-sm font-bold mt-0.5 text-slate-600';
+                }
+
+                // H Clocks
+                const hCard = document.getElementById(`card-h${i + 1}`);
+                const hVal = document.getElementById(`val-h${i + 1}`);
+                if (hClockActive === i && mode !== 'COMPLETE') {
+                    hCard.className = 'p-2 rounded-xl border border-amber-400 bg-amber-950/60 shadow-[0_0_12px_rgba(251,191,36,0.25)] transition-all';
+                    hVal.textContent = '+5V';
+                    hVal.className = 'text-sm font-bold mt-0.5 text-amber-300';
+                } else {
+                    hCard.className = 'p-2 rounded-xl border border-slate-800 bg-slate-950 transition-all';
+                    hVal.textContent = '0V';
+                    hVal.className = 'text-sm font-bold mt-0.5 text-slate-600';
+                }
+            }
+
+            // Render Digital Reconstructed 4x4 Grid
+            const gridContainer = document.getElementById('digitalGrid');
+            gridContainer.innerHTML = '';
+            for (let i = 0; i < ROWS * COLS; i++) {
+                const val = reconstructedPixels[i];
+                const cell = document.createElement('div');
+                if (val !== null) {
+                    const brightness = Math.round((val / 255) * 100);
+                    cell.style.backgroundColor = `rgba(56, 189, 248, ${val / 255})`;
+                    cell.className = 'rounded-lg border border-cyan-400/50 flex items-center justify-center text-[11px] font-mono-tech font-bold shadow-inner transition-all';
+                    cell.style.color = brightness > 55 ? '#060913' : '#e2e8f0';
+                    cell.textContent = val;
+                } else {
+                    cell.className = 'rounded-lg border border-slate-800/80 bg-slate-900/50 flex items-center justify-center text-[10px] font-mono-tech text-slate-700';
+                    cell.textContent = '--';
+                }
+                gridContainer.appendChild(cell);
+            }
+        }
+
+        // Smooth interpolation for packet coordinates
+        function updateVisualPositions() {
+            const lerpFactor = 0.22;
+            packets.forEach(p => {
+                p.visualR += (p.r - p.visualR) * lerpFactor;
+                p.visualC += (p.c - p.visualC) * lerpFactor;
+                p.visualSub += (p.subGate - p.visualSub) * lerpFactor;
+            });
+        }
+
+        // Resize Handler
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        // Main Architectural Canvas Renderer
+        function drawSchematic() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            const W = rect.width;
+            const H = rect.height;
+
+            ctx.clearRect(0, 0, W, H);
+
+            // Subtle Engineering Grid Background
+            ctx.strokeStyle = 'rgba(30, 41, 59, 0.35)';
+            ctx.lineWidth = 1;
+            const gridSpacing = 24;
+            for (let x = 0; x < W; x += gridSpacing) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+            }
+            for (let y = 0; y < H; y += gridSpacing) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+            }
+
+            // Layout Geometry Calculations
+            const leftBusMargin = Math.max(115, W * 0.16);
+            const rightAmpMargin = Math.max(155, W * 0.22);
+            const topMargin = 55;
+            const bottomBusMargin = 95;
+
+            const availW = W - leftBusMargin - rightAmpMargin;
+            const availH = H - topMargin - bottomBusMargin;
+
+            // Matrix dimensions (4x4) + gap + 1x4 Horizontal Register
+            const gapToHReg = 26;
+            const totalGridUnitsH = ROWS + 1.15; // 4 rows + 1 horizontal register
+            const cellH = Math.min(82, (availH - gapToHReg) / totalGridUnitsH);
+            const cellW = Math.min(115, availW / COLS);
+
+            const gridTotalW = cellW * COLS;
+            const gridTotalH = cellH * ROWS;
+
+            const gridStartX = leftBusMargin + (availW - gridTotalW) / 2;
+            const gridStartY = topMargin + 10;
+
+            const hRegStartY = gridStartY + gridTotalH + gapToHReg;
+            const hRegH = cellH * 0.95;
+
+            // 1. Draw Area Labels
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = 'bold 13px Cairo';
+            ctx.textAlign = 'center';
+            ctx.fillText('مصفوفة البكسلات / مسجل الإزاحة الرأسية (V-CCD 4×4)', gridStartX + gridTotalW / 2, gridStartY - 22);
+
+            // 2. Draw Vertical Clock Bus Lines on the Left (Vφ1, Vφ2, Vφ3)
+            const vBusColors = ['#22d3ee', '#38bdf8', '#818cf8']; // Cyan/Blue shades
+            const busStartX = gridStartX - 78;
+            const busSpacing = 22;
+
+            ctx.font = 'bold 11px JetBrains Mono';
+            for (let g = 0; g < 3; g++) {
+                const bx = busStartX + g * busSpacing;
+                const isActive = (vClockActive === g && mode !== 'COMPLETE');
+
+                // Bus Label at top
+                ctx.fillStyle = isActive ? '#22d3ee' : '#64748b';
+                ctx.textAlign = 'center';
+                ctx.fillText(`Vφ${g + 1}`, bx, gridStartY - 24);
+                ctx.font = '10px JetBrains Mono';
+                ctx.fillText(isActive ? '+5V' : '0V', bx, gridStartY - 10);
+                ctx.font = 'bold 11px JetBrains Mono';
+
+                // Vertical Main Bus Wire
+                ctx.strokeStyle = isActive ? '#22d3ee' : '#1e293b';
+                ctx.lineWidth = isActive ? 3 : 1.5;
+                if (isActive) {
+                    ctx.shadowColor = '#22d3ee';
+                    ctx.shadowBlur = 8;
+                }
+                ctx.beginPath();
+                ctx.moveTo(bx, gridStartY - 4);
+                ctx.lineTo(bx, gridStartY + gridTotalH - (cellH / 3) * (2 - g));
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+
+            // 3. Draw 4x4 Pixel Grid with 3 Horizontal Sub-Gates (φ1, φ2, φ3) per pixel
+            const subGateH = cellH / 3;
+
+            for (let r = 0; r < ROWS; r++) {
+                const rowY = gridStartY + r * cellH;
+
+                // Draw Horizontal Wires connecting V-Buses to each sub-gate row
+                for (let g = 0; g < 3; g++) {
+                    const sgY = rowY + g * subGateH + subGateH / 2;
+                    const bx = busStartX + g * busSpacing;
+                    const isActive = (vClockActive === g && mode !== 'COMPLETE');
+
+                    ctx.strokeStyle = isActive ? 'rgba(34, 211, 238, 0.75)' : 'rgba(51, 65, 85, 0.45)';
+                    ctx.lineWidth = isActive ? 2 : 1;
+                    ctx.beginPath();
+                    ctx.moveTo(bx, sgY);
+                    ctx.lineTo(gridStartX, sgY);
+                    ctx.stroke();
+
+                    // Solder node dot on the bus
+                    ctx.fillStyle = isActive ? '#22d3ee' : '#334155';
+                    ctx.beginPath();
+                    ctx.arc(bx, sgY, isActive ? 3.5 : 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                for (let c = 0; c < COLS; c++) {
+                    const cellX = gridStartX + c * cellW;
+
+                    // Draw 3 Sub-Gates inside each pixel
+                    for (let g = 0; g < 3; g++) {
+                        const sgY = rowY + g * subGateH;
+                        const isActive = (vClockActive === g && mode !== 'COMPLETE');
+
+                        ctx.fillStyle = isActive ? 'rgba(34, 211, 238, 0.22)' : 'rgba(15, 23, 42, 0.85)';
+                        ctx.fillRect(cellX + 2, sgY + 1, cellW - 4, subGateH - 2);
+
+                        ctx.strokeStyle = isActive ? 'rgba(34, 211, 238, 0.65)' : 'rgba(51, 65, 85, 0.5)';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(cellX + 2, sgY + 1, cellW - 4, subGateH - 2);
+
+                        // Sub-gate micro label
+                        ctx.fillStyle = isActive ? '#67e8f9' : '#475569';
+                        ctx.font = '9px JetBrains Mono';
+                        ctx.textAlign = 'left';
+                        ctx.fillText(`φ${g + 1}`, cellX + 6, sgY + subGateH / 2 + 3);
+                    }
+
+                    // Thick Pixel Boundary (Channel Stop)
+                    ctx.strokeStyle = '#475569';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(cellX, rowY, cellW, cellH);
+                }
+            }
+
+            // Draw Transfer Gate Arrows between V-CCD and H-CCD
+            for (let c = 0; c < COLS; c++) {
+                const cx = gridStartX + c * cellW + cellW / 2;
+                ctx.strokeStyle = mode === 'V_SHIFT' ? '#22d3ee' : '#334155';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(cx, gridStartY + gridTotalH + 3);
+                ctx.lineTo(cx, hRegStartY - 3);
+                ctx.stroke();
+
+                // Arrowhead
+                ctx.fillStyle = mode === 'V_SHIFT' ? '#22d3ee' : '#334155';
+                ctx.beginPath();
+                ctx.moveTo(cx, hRegStartY - 2);
+                ctx.lineTo(cx - 4, hRegStartY - 8);
+                ctx.lineTo(cx + 4, hRegStartY - 8);
+                ctx.fill();
+            }
+
+            // 4. Draw Bottom Horizontal Shift Register (H-CCD 1×4) with 3 Vertical Sub-Gates per cell
+            ctx.fillStyle = '#fbbf24';
+            ctx.font = 'bold 12px Cairo';
+            ctx.textAlign = 'right';
+            ctx.fillText('مسجل الإزاحة الأفقية (H-CCD)', gridStartX - 12, hRegStartY + hRegH / 2 + 4);
+
+            const subGateW = cellW / 3;
+            const hBusStartY = hRegStartY + hRegH + 22;
+            const hBusSpacing = 18;
+
+            // Horizontal Clock Bus Wires underneath H-CCD (Hφ1, Hφ2, Hφ3)
+            for (let g = 0; g < 3; g++) {
+                const by = hBusStartY + g * hBusSpacing;
+                const isActive = (hClockActive === g && mode !== 'COMPLETE');
+
+                ctx.strokeStyle = isActive ? '#fbbf24' : '#1e293b';
+                ctx.lineWidth = isActive ? 3 : 1.5;
+                if (isActive) {
+                    ctx.shadowColor = '#fbbf24';
+                    ctx.shadowBlur = 8;
+                }
+                ctx.beginPath();
+                ctx.moveTo(gridStartX - 10, by);
+                ctx.lineTo(gridStartX + gridTotalW, by);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // Bus Label on Left
+                ctx.fillStyle = isActive ? '#fbbf24' : '#64748b';
+                ctx.font = 'bold 11px JetBrains Mono';
+                ctx.textAlign = 'right';
+                ctx.fillText(`Hφ${g + 1} (${isActive ? '+5V' : '0V'})`, gridStartX - 16, by + 4);
+            }
+
+            for (let c = 0; c < COLS; c++) {
+                const cellX = gridStartX + c * cellW;
+
+                for (let g = 0; g < 3; g++) {
+                    const sgX = cellX + g * subGateW;
+                    const by = hBusStartY + g * hBusSpacing;
+                    const isActive = (hClockActive === g && mode !== 'COMPLETE');
+
+                    // Vertical wire tap from H-bus to H-subgate
+                    ctx.strokeStyle = isActive ? 'rgba(251, 191, 36, 0.8)' : 'rgba(51, 65, 85, 0.45)';
+                    ctx.lineWidth = isActive ? 2 : 1;
+                    ctx.beginPath();
+                    ctx.moveTo(sgX + subGateW / 2, by);
+                    ctx.lineTo(sgX + subGateW / 2, hRegStartY + hRegH);
+                    ctx.stroke();
+
+                    // Solder dot
+                    ctx.fillStyle = isActive ? '#fbbf24' : '#334155';
+                    ctx.beginPath();
+                    ctx.arc(sgX + subGateW / 2, by, isActive ? 3.5 : 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Sub-gate block inside H-CCD
+                    ctx.fillStyle = isActive ? 'rgba(251, 191, 36, 0.25)' : 'rgba(15, 23, 42, 0.9)';
+                    ctx.fillRect(sgX + 1, hRegStartY + 2, subGateW - 2, hRegH - 4);
+
+                    ctx.strokeStyle = isActive ? 'rgba(251, 191, 36, 0.7)' : 'rgba(51, 65, 85, 0.5)';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(sgX + 1, hRegStartY + 2, subGateW - 2, hRegH - 4);
+
+                    ctx.fillStyle = isActive ? '#fde68a' : '#475569';
+                    ctx.font = '9px JetBrains Mono';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`φ${g + 1}`, sgX + subGateW / 2, hRegStartY + hRegH - 6);
+                }
+
+                // Cell border
+                ctx.strokeStyle = '#64748b';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(cellX, hRegStartY, cellW, hRegH);
+            }
+
+            // 5. Draw Output Amplifier & ADC Block on the Right of H-CCD
+            const ampX = gridStartX + gridTotalW + 24;
+            const ampY = hRegStartY + hRegH / 2;
+
+            // Connection wire from H-CCD to Amplifier
+            ctx.strokeStyle = mode === 'H_SHIFT' ? '#fbbf24' : '#475569';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(gridStartX + gridTotalW, ampY);
+            ctx.lineTo(ampX, ampY);
+            ctx.stroke();
+
+            // Amplifier Triangle Symbol
+            ctx.fillStyle = '#0f172a';
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(ampX, ampY - 22);
+            ctx.lineTo(ampX + 38, ampY);
+            ctx.lineTo(ampX, ampY + 22);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#10b981';
+            ctx.font = 'bold 10px Cairo';
+            ctx.textAlign = 'center';
+            ctx.fillText('مضخم', ampX + 19, ampY - 28);
+
+            // Wire from Amplifier to ADC Box
+            const adcX = ampX + 52;
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(ampX + 38, ampY);
+            ctx.lineTo(adcX, ampY);
+            ctx.stroke();
+
+            // ADC Box
+            ctx.fillStyle = '#064e3b';
+            ctx.strokeStyle = '#34d399';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(adcX, ampY - 22, 54, 44, 8);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#ecfdf5';
+            ctx.font = 'bold 12px JetBrains Mono';
+            ctx.fillText('ADC', adcX + 27, ampY + 4);
+            ctx.font = '10px Cairo';
+            ctx.fillStyle = '#6ee7b7';
+            ctx.fillText('تحويل رقمي', adcX + 27, ampY - 28);
+
+            // 6. Draw Glowing Electron Charge Packets
+            packets.forEach(p => {
+                let px, py;
+
+                if (!p.inHorizontal) {
+                    // Inside 4x4 Vertical Matrix
+                    px = gridStartX + p.visualC * cellW + cellW / 2;
+                    py = gridStartY + p.visualR * cellH + p.visualSub * subGateH + subGateH / 2;
+                } else {
+                    // Inside 1x4 Horizontal Register
+                    px = gridStartX + p.visualC * cellW + p.visualSub * subGateW + subGateW / 2;
+                    py = hRegStartY + hRegH / 2;
+                }
+
+                const radius = 8 + (p.value / 255) * 9;
+
+                // Outer Glow
+                const grad = ctx.createRadialGradient(px, py, 1, px, py, radius * 1.9);
+                if (p.inHorizontal) {
+                    grad.addColorStop(0, 'rgba(251, 191, 36, 0.95)');
+                    grad.addColorStop(0.5, 'rgba(245, 158, 11, 0.45)');
+                    grad.addColorStop(1, 'rgba(245, 158, 11, 0)');
+                } else {
+                    grad.addColorStop(0, 'rgba(56, 189, 248, 0.95)');
+                    grad.addColorStop(0.5, 'rgba(14, 165, 233, 0.45)');
+                    grad.addColorStop(1, 'rgba(14, 165, 233, 0)');
+                }
+
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(px, py, radius * 1.9, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Core Charge Sphere
+                ctx.fillStyle = p.inHorizontal ? '#fef08a' : '#e0f2fe';
+                ctx.beginPath();
+                ctx.arc(px, py, radius * 0.65, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Charge Intensity Value Label
+                ctx.fillStyle = '#060913';
+                ctx.font = 'bold 9px JetBrains Mono';
+                ctx.textAlign = 'center';
+                ctx.fillText(p.value, px, py + 3);
+            });
+        }
+
+        // Animation Loop
+        function loop(timestamp) {
+            const stepIntervals = [0, 1400, 850, 500, 280, 140]; // ms per clock transition
+            const currentInterval = stepIntervals[speedLevel];
+
+            if (isPlaying && mode !== 'COMPLETE') {
+                if (timestamp - lastTickTime >= currentInterval) {
+                    stepSimulation();
+                    lastTickTime = timestamp;
+                }
+            }
+
+            updateVisualPositions();
+            drawSchematic();
+            requestAnimationFrame(loop);
+        }
+
+        // Event Listeners
+        document.getElementById('playPauseBtn').addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            document.getElementById('playIcon').textContent = isPlaying ? '⏸️' : '▶️';
+            document.getElementById('playText').textContent = isPlaying ? 'إيقاف مؤقت' : 'تشغيل';
+        });
+
+        document.getElementById('stepBtn').addEventListener('click', () => {
+            if (isPlaying) {
+                isPlaying = false;
+                document.getElementById('playIcon').textContent = '▶️';
+                document.getElementById('playText').textContent = 'تشغيل';
+            }
+            stepSimulation();
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            initSimulation();
+            isPlaying = true;
+            document.getElementById('playIcon').textContent = '⏸️';
+            document.getElementById('playText').textContent = 'إيقاف مؤقت';
+        });
+
+        document.getElementById('speedSlider').addEventListener('input', (e) => {
+            speedLevel = parseInt(e.target.value);
+            const names = ['', 'بطيء', 'متوسط', 'سريع', 'فائق', 'لحظي'];
+            document.getElementById('speedLabel').textContent = names[speedLevel];
+        });
+
+        // Boot
+        resizeCanvas();
+        initSimulation();
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>

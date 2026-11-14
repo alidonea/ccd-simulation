@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محاكاة هندسية: SAR ADC و SS ADC و Hybrid SS-SAR ADC</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #050811;
+            color: #e2e8f0;
+        }
+        .font-mono-tech {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-cyan-500 selection:text-slate-950">
+
+    <!-- Top Header & Simulation Controls -->
+    <header class="bg-slate-900/95 border-b border-slate-800 px-4 md:px-6 py-3.5 sticky top-0 z-30 backdrop-blur-md shadow-2xl">
+        <div class="max-w-[1560px] mx-auto flex flex-col xl:flex-row justify-between items-center gap-4">
+            <!-- Title -->
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-500/20 to-amber-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-2xl shadow-inner">
+                    📊
+                </div>
+                <div>
+                    <h1 class="text-lg md:text-xl font-black text-white tracking-tight">
+                        مقارنة معماريات التحويل: <span class="text-cyan-400">SAR</span> و <span class="text-rose-400">SS</span> و <span class="text-amber-400">Hybrid SS-SAR</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">محاكاة الدارات، راسم الإشارات الزمني، وتحليل دورات الساعة (Clock Cycles) في حساسات CMOS</p>
+                </div>
+            </div>
+
+            <!-- Interactive Parameters & Playback -->
+            <div class="flex flex-wrap items-center justify-center gap-3">
+                <!-- Analog Input Voltage Vin Slider -->
+                <div class="flex items-center gap-2.5 bg-slate-950 px-3.5 py-2 rounded-xl border border-slate-800">
+                    <span class="text-xs font-bold text-emerald-400">جهد البكسل <span class="font-mono-tech">Vin</span>:</span>
+                    <input id="vinSlider" type="range" min="0.05" max="3.25" step="0.01" value="2.15" class="w-28 md:w-36 accent-emerald-400 cursor-pointer">
+                    <span id="vinDisplay" class="font-mono-tech text-sm font-bold text-emerald-300 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30 w-16 text-center">2.15V</span>
+                </div>
+
+                <!-- Resolution Selector -->
+                <div class="flex items-center gap-2 bg-slate-950 px-3 py-2 rounded-xl border border-slate-800">
+                    <span class="text-xs font-semibold text-slate-400">الدقة:</span>
+                    <select id="resSelect" class="bg-slate-900 text-cyan-300 font-mono-tech text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 focus:outline-none cursor-pointer">
+                        <option value="6">6-Bit (64 مستوى)</option>
+                        <option value="8" selected>8-Bit (256 مستوى)</option>
+                        <option value="10">10-Bit (1024 مستوى)</option>
+                    </select>
+                </div>
+
+                <!-- Playback Buttons -->
+                <div class="flex items-center gap-2">
+                    <button id="playPauseBtn" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-4 py-2 rounded-xl shadow-lg shadow-cyan-500/20 transition flex items-center gap-1.5 text-sm cursor-pointer">
+                        <span id="playIcon">⏸️</span>
+                        <span id="playText">إيقاف</span>
+                    </button>
+                    <button id="stepBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-100 font-semibold px-3.5 py-2 rounded-xl border border-slate-700 transition text-sm cursor-pointer" title="تقدم دورة ساعة واحدة">
+                        خطوة ⏭️
+                    </button>
+                    <button id="resetBtn" class="bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 font-semibold px-3.5 py-2 rounded-xl border border-amber-500/30 transition text-sm cursor-pointer">
+                        إعادة ↻
+                    </button>
+                </div>
+
+                <!-- Speed Control -->
+                <div class="flex items-center gap-2 bg-slate-950 px-3 py-2 rounded-xl border border-slate-800">
+                    <span class="text-xs text-slate-400">السرعة:</span>
+                    <input id="speedSlider" type="range" min="1" max="5" value="3" class="w-16 accent-cyan-400 cursor-pointer">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- View Mode Selector & Global Clock Telemetry -->
+    <div class="bg-slate-900/60 border-b border-slate-800/80 px-4 md:px-6 py-2.5">
+        <div class="max-w-[1560px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+            <!-- View Tabs -->
+            <div class="flex flex-wrap items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                <button data-view="all" class="view-tab active px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-white shadow transition cursor-pointer">
+                    عرض المقارنة المتزامن (الكل)
+                </button>
+                <button data-view="sar" class="view-tab px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-cyan-300 transition cursor-pointer">
+                    1. SAR ADC (التقريب المتتالي)
+                </button>
+                <button data-view="ss" class="view-tab px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-rose-300 transition cursor-pointer">
+                    2. SS ADC (المنحدر الأحادي)
+                </button>
+                <button data-view="hybrid" class="view-tab px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-amber-300 transition cursor-pointer">
+                    3. Hybrid SS-SAR (الهجين)
+                </button>
+            </div>
+
+            <!-- Live Global Clock Counter -->
+            <div class="flex items-center gap-4 text-xs font-mono-tech">
+                <span class="text-slate-400">الجهد المرجعي <strong class="text-slate-200">Vref = 3.30V</strong></span>
+                <span class="px-3 py-1 rounded-lg bg-slate-950 border border-slate-800 text-cyan-300">
+                    نبضة الساعة الحالية (Clock): <strong id="globalCycleDisplay" class="text-base text-white">0</strong>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 max-w-[1560px] w-full mx-auto p-4 md:p-6 flex flex-col gap-6">
+
+        <!-- Three Architecture Cards Grid -->
+        <div id="cardsContainer" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- ================= CARD 1: SAR ADC ================= -->
+            <section id="card-sar" class="bg-slate-900/75 border border-cyan-500/30 rounded-2xl p-4 flex flex-col gap-3.5 shadow-2xl">
+                <!-- Card Header -->
+                <div class="flex justify-between items-start border-b border-slate-800 pb-2.5">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]"></span>
+                            <h2 class="text-base font-black text-cyan-300">1. محول التقريب المتتالي (SAR ADC)</h2>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-0.5">بحث ثنائي (Binary Search) باستخدام مصفوفة مكثفات CDAC</p>
+                    </div>
+                    <span id="sar-status" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-500/40">
+                        قيد التحويل
+                    </span>
+                </div>
+
+                <!-- Circuit Schematic Canvas -->
+                <div class="bg-[#04070f] rounded-xl border border-slate-800/90 h-52 relative overflow-hidden">
+                    <canvas id="sarCircuitCanvas" class="w-full h-full block"></canvas>
+                </div>
+
+                <!-- Oscilloscope Waveform Canvas -->
+                <div class="bg-[#04070f] rounded-xl border border-slate-800/90 h-44 relative overflow-hidden">
+                    <canvas id="sarWaveCanvas" class="w-full h-full block"></canvas>
+                </div>
+
+                <!-- SAR Bit Register Display -->
+                <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3">
+                    <div class="flex justify-between items-center text-[11px] text-slate-400 mb-2">
+                        <span>مسجل SAR (من MSB إلى LSB):</span>
+                        <span class="font-mono-tech text-cyan-400">VDAC = <strong id="sar-vdac-text">0.00V</strong></span>
+                    </div>
+                    <div id="sar-bits-row" class="flex flex-row-reverse justify-center gap-1 font-mono-tech">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Metrics Footer -->
+                <div class="grid grid-cols-3 gap-2 text-center font-mono-tech text-xs pt-1">
+                    <div class="bg-slate-950 p-2 rounded-xl border border-slate-800">
+                        <div class="text-[10px] text-slate-500 font-sans">دورات الساعة</div>
+                        <div id="sar-cycles" class="text-sm font-bold text-cyan-400 mt-0.5">0 / 8</div>
+                    </div>
+                    <div class="bg-slate-950 p-2 rounded-xl border border-slate-800">
+                        <div class="text-[10px] text-slate-500 font-sans">الكود الرقمي</div>
+                        <div id="sar-code" class="text-sm font-bold text-white mt-0.5">---</div>
+                    </div>
+                    <div class="bg-slate-950 p-2 rounded-xl border border-slate-800">
+                        <div class="text-[10px] text-slate-500 font-sans">السرعة</div>
+                        <div class="text-xs font-bold text-emerald-400 mt-1 font-sans">فائقة (N دورة)</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= CARD 2: SS ADC ================= -->
+            <section id="card-ss" class="bg-slate-900/75 border border-rose-500/30 rounded-2xl p-4 flex flex-col gap-3.5 shadow-2xl">
+                <!-- Card Header -->
+                <div class="flex justify-between items-start border-b border-slate-800 pb-2.5">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-rose-400 shadow-[0_0_8px_#fb7185]"></span>
+                            <h2 class="text-base font-black text-rose-300">2. محول المنحدر الأحادي (SS ADC)</h2>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-0.5">مولد منحدر خطي مشترك (Ramp) + مقارن + عداد رقمي</p>
+                    </div>
+                    <span id="ss-status" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-rose-950 text-rose-300 border border-rose-500/40">
+                        قيد العدّ
+                    </span>
+                </div>
+
+                <!-- Circuit Schematic Canvas -->
+                <div class="bg-[#04070f] rounded-xl border border-slate-800/90 h-52 relative overflow-hidden">
+                    <canvas id="ssCircuitCanvas" class="w-full h-full block"></canvas>
+                </div>
+
+                <!-- Oscilloscope Waveform Canvas -->
+                <div class="bg-[#04070f] rounded-xl border border-slate-800/90 h-44 relative overflow-hidden">
+                    <canvas id="ssWaveCanvas" class="w-full h-full block"></canvas>
+                </div>
+
+                <!-- Ripple Counter Register Display -->
+                <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3">
+                    <div class="flex justify-between items-center text-[11px] text-slate-400 mb-2">
+                        <span>العداد الرقمي للعمود (Counter):</span>
+                        <span class="font-mono-tech text-rose-400">Vramp = <strong id="ss-vramp-text">0.00V</strong></span>
+                    </div>
+                    <div id="ss-bits-row" class="flex flex-row-reverse justify-center gap-1 font-mono-tech">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Metrics Footer -->
+                <div class="grid grid-cols-3 gap-2 text-center font-mono-tech text-xs pt-1">
+                    <div class="bg-slate-950 p-2 rounded-xl border border-slate-800">
+                        <div class="text-[10px] text-slate-500 font-sans">دورات الساعة</div>
+                        <div id="ss-cycles" class="text-sm font-bold text-rose-400 mt-0.5">0 / 256</div>
+                    </div>
+                    <div class="bg-slate-950 p-2 rounded-xl border border-slate-800">
+                        <div class="text-[10px] text-slate-500 font-sans">الكود الرقمي</div>
+                        <div id="ss-code" class="text-sm font-bold text-white mt-0.5">---</div>
+                    </div>
+                    <div class="bg-slate-950 p-2 rounded-xl border border-slate-800">
+                        <div class="text-[10px] text-slate-500 font-sans">السرعة</div>
+                        <div class="text-xs font-bold text-rose-400 mt-1 font-sans">بطيئة (2^N دورة)</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= CARD 3: HYBRID SS-SAR ADC ================= -->
+            <section id="card-hybrid" class="bg-slate-900/75 border border-amber-500/30 rounded-2xl p-4 flex flex-col gap-3.5 shadow-2xl">
+                <!-- Card Header -->
+                <div class="flex justify-between items-start border-b border-slate-800 pb-2.5">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]"></span>
+                            <h2 class="text-base font-black text-amber-300">3. المحول الهجين (Hybrid SS-SAR)</h2>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-0.5">مرحلتي تحويل: تقريب خشن (Coarse SAR) + منحدر دقيق (Fine SS)</p>
+                    </div>
+                    <span id="hyb-status" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-950 text-amber-300 border border-amber-500/40">
+                        المرحلة 1: SAR
+                    </span>
+                </div>
+
+                <!-- Circuit Schematic Canvas -->
+                <div class="bg-[#04070f] rounded-xl border border-slate-800/90 h-52 relative overflow-hidden">
+                    <canvas id="hybCircuitCanvas" class="w-full h-full block"></canvas>
+                </div>
+
+                <!-- Oscilloscope Waveform Canvas -->
+                <div class="bg-[#04070f] rounded-xl border border-slate-800/90 h-44 relative overflow-hidden">
+                    <canvas id="hybWaveCanvas" class="w-full h-full block"></canvas>
+                </div>
+
+                <!-- Split Coarse + Fine Register Display -->
+                <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3">
+                    <div class="flex justify-between items-center text-[11px] text-slate-400 mb-2">
+                        <span>المسجل المقسّم (<span class="text-cyan-400">Coarse SAR</span> + <span class="text-amber-400">Fine SS</span>):</span>
+                        <span class="font-mono-tech text-amber-400">Vref_dac = <strong id="hyb-vdac-text">0.00V</strong></span>
+                    </div>
+                    <div id="hyb-bits-row" class="flex flex-row-reverse justify-center gap-1 font-mono-tech">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Metrics Footer -->
+                <div class="grid grid-cols-3 gap-2 text-center font-mono-tech text-xs pt-1">
+                    <div class="bg-slate-950 p-2 rounded-xl border border-slate-800">
+                        <div class="text-[10px] text-slate-500 font-sans">دورات الساعة</div>
+                        <div id="hyb-cycles" class="text-sm font-bold text-amber-400 mt-0.5">0 / 20</div>
+                    </div>
+                    <div class="bg-slate-950 p-2 rounded-xl border border-slate-800">
+                        <div class="text-[10px] text-slate-500 font-sans">الكود الرقمي</div>
+                        <div id="hyb-code" class="text-sm font-bold text-white mt-0.5">---</div>
+                    </div>
+                    <div class="bg-slate-950 p-2 rounded-xl border border-slate-800">
+                        <div class="text-[10px] text-slate-500 font-sans">الكفاءة</div>
+                        <div class="text-xs font-bold text-amber-300 mt-1 font-sans">مثالية للحساسات</div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+
+        <!-- Bottom Engineering Comparison Table & Summary -->
+        <section class="bg-slate-900/75 border border-slate-800 rounded-2xl p-5 shadow-xl">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 mb-4 border-b border-slate-800 pb-3">
+                <h3 class="text-base font-black text-white flex items-center gap-2">
+                    <span>📐</span> جدول المقارنة الهندسية والمقايضات التصميمية في حساسات الصور (Column-Parallel ADCs)
+                </h3>
+                <span id="speedupBadge" class="text-xs font-bold px-3 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                    تسريع الهجين مقارنة بـ SS: جاري الحساب...
+                </span>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-right text-xs md:text-sm border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-800 text-slate-400 bg-slate-950/60">
+                            <th class="p-3 font-bold">المعيار الهندسي</th>
+                            <th class="p-3 font-bold text-cyan-400">SAR ADC (التقريب المتتالي)</th>
+                            <th class="p-3 font-bold text-rose-400">SS ADC (المنحدر الأحادي)</th>
+                            <th class="p-3 font-bold text-amber-400">Hybrid SS-SAR (الهجين)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800/70">
+                        <tr>
+                            <td class="p-3 font-bold text-slate-200">عدد دورات الساعة (لـ <span id="tbl-n">8</span>-Bit)</td>
+                            <td class="p-3 font-mono-tech text-cyan-300 font-bold" id="tbl-sar-cycles">8 دورات (N)</td>
+                            <td class="p-3 font-mono-tech text-rose-300 font-bold" id="tbl-ss-cycles">حتى 256 دورة (2^N)</td>
+                            <td class="p-3 font-mono-tech text-amber-300 font-bold" id="tbl-hyb-cycles">20 دورة كحد أقصى (M + 2^(N-M))</td>
+                        </tr>
+                        <tr>
+                            <td class="p-3 font-bold text-slate-200">المساحة وعرض العمود (Column Pitch)</td>
+                            <td class="p-3 text-slate-300">كبيرة نسبياً بسبب مصفوفة المكثفات الضخمة ($2^N$ وحدة) لكل عمود.</td>
+                            <td class="p-3 text-emerald-300">صغيرة جداً؛ مولد المنحدر مشترك وكل عمود يحتاج مقارناً وعداداً فقط.</td>
+                            <td class="p-3 text-amber-200">مدمجة وممتازة؛ مصفوفة مكثفات صغيرة ($2^M$ فقط) + منحدر مشترك دقيق.</td>
+                        </tr>
+                        <tr>
+                            <td class="p-3 font-bold text-slate-200">الخطية وتجانس الأعمدة (Linearity / DNL)</td>
+                            <td class="p-3 text-slate-300">حساسة لعدم تطابق المكثفات (Capacitor Mismatch) عند الدقات العالية.</td>
+                            <td class="p-3 text-emerald-300">خطية ممتازة وتجانس عالٍ بين الأعمدة بفضل المنحدر الخطي المشترك.</td>
+                            <td class="p-3 text-emerald-300">تجمع خطية المنحدر العالية في البتات الدنيا مع سرعة التقريب في البتات العليا.</td>
+                        </tr>
+                        <tr>
+                            <td class="p-3 font-bold text-slate-200">أبرز التطبيقات الحديثة</td>
+                            <td class="p-3 text-slate-400">المتحكمات الدقيقة وأنظمة الاتصالات فائقة السرعة.</td>
+                            <td class="p-3 text-slate-400">حساسات الكاميرات القياسية (8-bit إلى 10-bit).</td>
+                            <td class="p-3 text-amber-300 font-semibold">حساسات الهواتف الرائدة وكاميرات السينما (12-bit إلى 14-bit عالية السرعة).</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // ================= SIMULATION CORE STATE =================
+        const VREF = 3.30;
+        let N = 8; // Total bits (6, 8, or 10)
+        let M = 4; // Coarse bits for Hybrid SS-SAR (N / 2)
+        let vin = 2.15;
+
+        let isPlaying = true;
+        let speedLevel = 3;
+        let lastTick = 0;
+        let globalCycle = 0;
+
+        // 1. SAR ADC State
+        let sar = {
+            bits: [],
+            currentBit: 0, // N-1 down to 0
+            vdac: 0,
+            trialVoltage: 0,
+            compHigh: false,
+            done: false,
+            cyclesUsed: 0,
+            history: [] // { cycle, vdac, trial }
+        };
+
+        // 2. Single-Slope (SS) ADC State
+        let ss = {
+            count: 0,
+            maxCount: 256,
+            vramp: 0,
+            compTriggered: false,
+            done: false,
+            cyclesUsed: 0,
+            history: [] // { cycle, vramp }
+        };
+
+        // 3. Hybrid SS-SAR ADC State
+        let hyb = {
+            phase: 'COARSE_SAR', // 'COARSE_SAR' -> 'FINE_SS' -> 'DONE'
+            bits: [],
+            coarseBit: 0, // M-1 down to 0
+            coarseBaseV: 0,
+            trialVoltage: 0,
+            fineCount: 0,
+            fineMaxCount: 16,
+            vdac: 0,
+            compHigh: false,
+            done: false,
+            cyclesUsed: 0,
+            history: [] // { cycle, v, phase }
+        };
+
+        function resetAll() {
+            M = Math.floor(N / 2);
+            const totalLevels = Math.pow(2, N);
+            const fineLevels = Math.pow(2, N - M);
+
+            globalCycle = 0;
+
+            // Reset SAR
+            sar = {
+                bits: Array(N).fill(null),
+                currentBit: N - 1,
+                vdac: 0,
+                trialVoltage: VREF / 2,
+                compHigh: false,
+                done: false,
+                cyclesUsed: 0,
+                history: [{ cycle: 0, vdac: 0 }]
+            };
+
+            // Reset SS
+            ss = {
+                count: 0,
+                maxCount: totalLevels,
+                vramp: 0,
+                compTriggered: false,
+                done: false,
+                cyclesUsed: 0,
+                history: [{ cycle: 0, vramp: 0 }]
+            };
+
+            // Reset Hybrid SS-SAR
+            hyb = {
+                phase: 'COARSE_SAR',
+                bits: Array(N).fill(null),
+                coarseBit: M - 1,
+                coarseBaseV: 0,
+                trialVoltage: VREF / 2,
+                fineCount: 0,
+                fineMaxCount: fineLevels,
+                vdac: 0,
+                compHigh: false,
+                done: false,
+                cyclesUsed: 0,
+                history: [{ cycle: 0, v: 0, phase: 'COARSE_SAR' }]
+            };
+
+            updateComparisonTableLabels();
+            updateDOM();
+            renderAllCanvases();
+        }
+
+        function stepAll() {
+            if (sar.done && ss.done && hyb.done) return;
+
+            globalCycle++;
+
+            // --- STEP 1: SAR ADC ---
+            if (!sar.done) {
+                sar.cyclesUsed++;
+                const b = sar.currentBit;
+                const bitWeight = VREF / Math.pow(2, N - b);
+                const testV = sar.vdac + bitWeight;
+                sar.trialVoltage = testV;
+
+                if (vin >= testV) {
+                    sar.bits[b] = 1;
+                    sar.vdac = testV;
+                    sar.compHigh = true;
+                } else {
+                    sar.bits[b] = 0;
+                    sar.compHigh = false;
+                }
+
+                sar.history.push({ cycle: sar.cyclesUsed, vdac: sar.vdac, trial: testV });
+
+                if (b === 0) {
+                    sar.done = true;
+                } else {
+                    sar.currentBit--;
+                }
+            }
+
+            // --- STEP 2: Single-Slope (SS) ADC ---
+            if (!ss.done) {
+                ss.cyclesUsed++;
+                const lsb = VREF / ss.maxCount;
+                const nextVramp = (ss.count + 1) * lsb;
+
+                if (nextVramp > vin || ss.count + 1 >= ss.maxCount) {
+                    // Ramp crossed Vin! Latch counter!
+                    ss.vramp = nextVramp;
+                    ss.compTriggered = true;
+                    ss.done = true;
+                } else {
+                    ss.count++;
+                    ss.vramp = ss.count * lsb;
+                }
+                ss.history.push({ cycle: ss.cyclesUsed, vramp: ss.vramp });
+            }
+
+            // --- STEP 3: Hybrid SS-SAR ADC ---
+            if (!hyb.done) {
+                hyb.cyclesUsed++;
+
+                if (hyb.phase === 'COARSE_SAR') {
+                    // Step through top M bits (indices N-1 down to N-M)
+                    const bitIdx = (N - M) + hyb.coarseBit;
+                    const bitWeight = VREF / Math.pow(2, N - bitIdx);
+                    const testV = hyb.coarseBaseV + bitWeight;
+                    hyb.trialVoltage = testV;
+
+                    if (vin >= testV) {
+                        hyb.bits[bitIdx] = 1;
+                        hyb.coarseBaseV = testV;
+                        hyb.compHigh = true;
+                    } else {
+                        hyb.bits[bitIdx] = 0;
+                        hyb.compHigh = false;
+                    }
+
+                    hyb.vdac = hyb.coarseBaseV;
+                    hyb.history.push({ cycle: hyb.cyclesUsed, v: hyb.vdac, phase: 'COARSE_SAR' });
+
+                    if (hyb.coarseBit === 0) {
+                        // Coarse SAR finished! Switch to Fine Single-Slope Ramp inside [coarseBaseV, coarseBaseV + 1 Coarse LSB]
+                        hyb.phase = 'FINE_SS';
+                        hyb.fineCount = 0;
+                    } else {
+                        hyb.coarseBit--;
+                    }
+                } else if (hyb.phase === 'FINE_SS') {
+                    const fineLsb = VREF / Math.pow(2, N);
+                    const nextFineV = hyb.coarseBaseV + (hyb.fineCount + 1) * fineLsb;
+
+                    if (nextFineV > vin || hyb.fineCount + 1 >= hyb.fineMaxCount) {
+                        // Fine ramp crossed Vin! Latch lower (N-M) bits!
+                        hyb.vdac = nextFineV;
+                        hyb.compHigh = false;
+                        // Fill lower bits from fineCount
+                        for (let i = 0; i < N - M; i++) {
+                            hyb.bits[i] = (hyb.fineCount >> i) & 1;
+                        }
+                        hyb.phase = 'DONE';
+                        hyb.done = true;
+                    } else {
+                        hyb.fineCount++;
+                        hyb.vdac = hyb.coarseBaseV + hyb.fineCount * fineLsb;
+                        hyb.compHigh = true;
+                        for (let i = 0; i < N - M; i++) {
+                            hyb.bits[i] = (hyb.fineCount >> i) & 1;
+                        }
+                    }
+                    hyb.history.push({ cycle: hyb.cyclesUsed, v: hyb.vdac, phase: 'FINE_SS' });
+                }
+            }
+
+            updateDOM();
+            renderAllCanvases();
+        }
+
+        // ================= DOM & BIT REGISTERS UPDATER =================
+        function updateDOM() {
+            document.getElementById('globalCycleDisplay').textContent = globalCycle;
+
+            // --- 1. SAR DOM ---
+            const sarStatus = document.getElementById('sar-status');
+            if (sar.done) {
+                sarStatus.textContent = 'اكتمل التحويل ✓';
+                sarStatus.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40';
+            } else {
+                sarStatus.textContent = `اختبار Bit ${sar.currentBit}`;
+                sarStatus.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-500/40';
+            }
+            document.getElementById('sar-vdac-text').textContent = `${sar.vdac.toFixed(3)}V`;
+            document.getElementById('sar-cycles').textContent = `${sar.cyclesUsed} / ${N}`;
+            const sarVal = bitsToDecimal(sar.bits);
+            document.getElementById('sar-code').textContent = sar.done ? `${sarVal}` : `~${sarVal}`;
+            renderBitBoxes('sar-bits-row', sar.bits, sar.done ? -1 : sar.currentBit, 'cyan', 'cyan');
+
+            // --- 2. SS DOM ---
+            const ssStatus = document.getElementById('ss-status');
+            if (ss.done) {
+                ssStatus.textContent = 'اكتمل التحويل ✓';
+                ssStatus.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40';
+            } else {
+                ssStatus.textContent = `تصاعد المنحدر (${ss.count})`;
+                ssStatus.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold bg-rose-950 text-rose-300 border border-rose-500/40';
+            }
+            document.getElementById('ss-vramp-text').textContent = `${ss.vramp.toFixed(3)}V`;
+            document.getElementById('ss-cycles').textContent = `${ss.cyclesUsed} / ${ss.maxCount}`;
+            document.getElementById('ss-code').textContent = `${ss.count}`;
+            const ssBits = decimalToBits(ss.count, N);
+            renderBitBoxes('ss-bits-row', ssBits, -1, 'rose', 'rose');
+
+            // --- 3. Hybrid SS-SAR DOM ---
+            const hybStatus = document.getElementById('hyb-status');
+            if (hyb.done) {
+                hybStatus.textContent = 'اكتمل التحويل ✓';
+                hybStatus.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40';
+            } else if (hyb.phase === 'COARSE_SAR') {
+                hybStatus.textContent = `مرحلة 1: SAR (MSB)`;
+                hybStatus.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-500/40';
+            } else {
+                hybStatus.textContent = `مرحلة 2: منحدر دقيق`;
+                hybStatus.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-950 text-amber-300 border border-amber-500/40';
+            }
+            document.getElementById('hyb-vdac-text').textContent = `${hyb.vdac.toFixed(3)}V`;
+            const hybMaxCycles = M + Math.pow(2, N - M);
+            document.getElementById('hyb-cycles').textContent = `${hyb.cyclesUsed} / ${hybMaxCycles}`;
+            const hybVal = bitsToDecimal(hyb.bits);
+            document.getElementById('hyb-code').textContent = hyb.done ? `${hybVal}` : `~${hybVal}`;
+            const activeHybBit = hyb.phase === 'COARSE_SAR' ? (N - M + hyb.coarseBit) : -1;
+            renderHybridBitBoxes('hyb-bits-row', hyb.bits, activeHybBit, M);
+
+            // Speedup badge
+            const targetCode = Math.min(Math.pow(2, N) - 1, Math.floor((vin / VREF) * Math.pow(2, N)));
+            const estSsCycles = targetCode + 1;
+            const estHybCycles = M + (targetCode % Math.pow(2, N - M)) + 1;
+            const speedup = (estSsCycles / Math.max(1, estHybCycles)).toFixed(1);
+            document.getElementById('speedupBadge').textContent =
+                `عند Vin=${vin.toFixed(2)}V: الهجين يحتاج ~${estHybCycles} دورة مقابل ~${estSsCycles} دورة لـ SS (أسرع بـ ${speedup}x)`;
+        }
+
+        function bitsToDecimal(bitsArr) {
+            let val = 0;
+            for (let i = 0; i < bitsArr.length; i++) {
+                if (bitsArr[i] === 1) val += (1 << i);
+            }
+            return val;
+        }
+
+        function decimalToBits(num, width) {
+            const arr = [];
+            for (let i = 0; i < width; i++) {
+                arr.push((num >> i) & 1);
+            }
+            return arr;
+        }
+
+        function renderBitBoxes(containerId, bits, activeIdx, color) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            for (let i = 0; i < bits.length; i++) {
+                const bit = bits[i];
+                const isAct = (i === activeIdx);
+                const box = document.createElement('div');
+                let styleClass = 'w-6 h-7 rounded flex flex-col items-center justify-center border text-[11px] font-bold transition-all ';
+                if (isAct) {
+                    styleClass += 'border-white bg-cyan-500/30 text-white scale-105 shadow-[0_0_8px_rgba(34,211,238,0.5)]';
+                } else if (bit === 1) {
+                    styleClass += color === 'cyan'
+                        ? 'border-cyan-400/70 bg-cyan-950/80 text-cyan-300'
+                        : 'border-rose-400/70 bg-rose-950/80 text-rose-300';
+                } else if (bit === 0) {
+                    styleClass += 'border-slate-700 bg-slate-900 text-slate-400';
+                } else {
+                    styleClass += 'border-slate-800 bg-slate-950 text-slate-600';
+                }
+                box.className = styleClass;
+                box.innerHTML = `<span class="text-[8px] text-slate-500 leading-none">B${i}</span><span>${bit === null ? '-' : bit}</span>`;
+                container.appendChild(box);
+            }
+        }
+
+        function renderHybridBitBoxes(containerId, bits, activeIdx, coarseCount) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            const fineCount = bits.length - coarseCount;
+            for (let i = 0; i < bits.length; i++) {
+                const bit = bits[i];
+                const isCoarse = i >= fineCount;
+                const isAct = (i === activeIdx);
+                const box = document.createElement('div');
+                let styleClass = 'w-6 h-7 rounded flex flex-col items-center justify-center border text-[11px] font-bold transition-all ';
+                if (isAct) {
+                    styleClass += 'border-white bg-cyan-500/30 text-white scale-105';
+                } else if (bit === 1) {
+                    styleClass += isCoarse
+                        ? 'border-cyan-400/70 bg-cyan-950/80 text-cyan-300'
+                        : 'border-amber-400/70 bg-amber-950/80 text-amber-300';
+                } else if (bit === 0) {
+                    styleClass += 'border-slate-700 bg-slate-900 text-slate-400';
+                } else {
+                    styleClass += isCoarse
+                        ? 'border-cyan-900/40 bg-slate-950 text-slate-600'
+                        : 'border-amber-900/40 bg-slate-950 text-slate-600';
+                }
+                box.className = styleClass;
+                box.innerHTML = `<span class="text-[8px] text-slate-500 leading-none">B${i}</span><span>${bit === null ? '-' : bit}</span>`;
+                container.appendChild(box);
+            }
+        }
+
+        function updateComparisonTableLabels() {
+            document.getElementById('tbl-n').textContent = N;
+            document.getElementById('tbl-sar-cycles').textContent = `${N} دورات (N)`;
+            document.getElementById('tbl-ss-cycles').textContent = `حتى ${Math.pow(2, N)} دورة (2^N)`;
+            document.getElementById('tbl-hyb-cycles').textContent = `${M + Math.pow(2, N - M)} دورة كحد أقصى (${M} + 2^${N - M})`;
+        }
+
+        // ================= CANVAS RENDERERS (SCHEMATICS + OSCILLOSCOPES) =================
+        function setupHiDPICanvas(canvas) {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            if (canvas.width !== Math.floor(rect.width * dpr) || canvas.height !== Math.floor(rect.height * dpr)) {
+                canvas.width = Math.floor(rect.width * dpr);
+                canvas.height = Math.floor(rect.height * dpr);
+            }
+            const ctx = canvas.getContext('2d');
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            return { ctx, W: rect.width, H: rect.height };
+        }
+
+        function renderAllCanvases() {
+            drawSarSchematic();
+            drawSarWaveform();
+            drawSsSchematic();
+            drawSsWaveform();
+            drawHybridSchematic();
+            drawHybridWaveform();
+        }
+
+        // --- 1A. SAR ADC SCHEMATIC ---
+        function drawSarSchematic() {
+            const { ctx, W, H } = setupHiDPICanvas(document.getElementById('sarCircuitCanvas'));
+            ctx.clearRect(0, 0, W, H);
+
+            // Title Tag
+            ctx.fillStyle = '#64748b';
+            ctx.font = 'bold 10px Cairo';
+            ctx.textAlign = 'right';
+            ctx.fillText('مخطط الدارة: مقارن + مسجل SAR + مصفوفة مكثفات CDAC', W - 10, 16);
+
+            const midY = H * 0.44;
+            // S/H Block
+            drawBlock(ctx, 14, midY - 24, 52, 34, 'S/H', `Vin=${vin.toFixed(2)}V`, '#10b981', true);
+
+            // Wire S/H -> Comparator (+)
+            drawWire(ctx, 66, midY - 10, 125, midY - 10, '#10b981', true);
+
+            // Comparator Triangle
+            drawComparator(ctx, 125, midY, sar.compHigh, '#22d3ee');
+
+            // Wire Comparator -> SAR Logic
+            const logicX = 185;
+            drawWire(ctx, 165, midY, logicX, midY, sar.compHigh ? '#22d3ee' : '#475569', sar.compHigh);
+
+            // SAR Logic Register Block
+            drawBlock(ctx, logicX, midY - 22, 86, 44, 'SAR Logic', `Bit ${sar.done ? 'Done' : sar.currentBit}`, '#22d3ee', !sar.done);
+
+            // Feedback Wire down to Binary-Weighted CDAC
+            const dacY = H * 0.78;
+            const dacX = 105;
+            drawWire(ctx, logicX + 43, midY + 22, logicX + 43, dacY, '#22d3ee', !sar.done);
+            drawWire(ctx, logicX + 43, dacY, dacX + 95, dacY, '#22d3ee', !sar.done);
+
+            // Binary-Weighted CDAC Box
+            drawBlock(ctx, dacX, dacY - 18, 95, 36, `${N}-Bit CDAC`, `VDAC=${sar.vdac.toFixed(2)}V`, '#38bdf8', true);
+
+            // Feedback Wire CDAC -> Comparator (-)
+            drawWire(ctx, dacX, dacY, 95, dacY, '#38bdf8', true);
+            drawWire(ctx, 95, dacY, 95, midY + 10, '#38bdf8', true);
+            drawWire(ctx, 95, midY + 10, 125, midY + 10, '#38bdf8', true);
+        }
+
+        // --- 1B. SAR ADC OSCILLOSCOPE WAVEFORM ---
+        function drawSarWaveform() {
+            const { ctx, W, H } = setupHiDPICanvas(document.getElementById('sarWaveCanvas'));
+            drawOscilloscopeGrid(ctx, W, H, `راسم الإشارة: البحث الثنائي (Vin مقابل VDAC) خلال ${N} دورات`);
+
+            const padL = 36, padR = 14, padT = 24, padB = 22;
+            const plotW = W - padL - padR;
+            const plotH = H - padT - padB;
+
+            // Draw Target Vin dashed line
+            const vinY = padT + plotH * (1 - vin / VREF);
+            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(padL, vinY); ctx.lineTo(padL + plotW, vinY); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#34d399';
+            ctx.font = 'bold 9px JetBrains Mono';
+            ctx.textAlign = 'left';
+            ctx.fillText(`Vin=${vin.toFixed(2)}V`, padL + 4, vinY - 4);
+
+            // Draw SAR Stepped Waveform
+            if (sar.history.length > 0) {
+                ctx.strokeStyle = '#22d3ee';
+                ctx.lineWidth = 2.2;
+                ctx.beginPath();
+                sar.history.forEach((pt, idx) => {
+                    const x = padL + (pt.cycle / N) * plotW;
+                    const y = padT + plotH * (1 - pt.vdac / VREF);
+                    if (idx === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        const prevY = padT + plotH * (1 - sar.history[idx - 1].vdac / VREF);
+                        ctx.lineTo(x, prevY);
+                        ctx.lineTo(x, y);
+                    }
+                });
+                ctx.stroke();
+
+                // Draw trial spike dots
+                sar.history.forEach(pt => {
+                    if (pt.cycle > 0) {
+                        const x = padL + (pt.cycle / N) * plotW;
+                        const y = padT + plotH * (1 - pt.vdac / VREF);
+                        ctx.fillStyle = '#67e8f9';
+                        ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+                    }
+                });
+            }
+        }
+
+        // --- 2A. SS ADC SCHEMATIC ---
+        function drawSsSchematic() {
+            const { ctx, W, H } = setupHiDPICanvas(document.getElementById('ssCircuitCanvas'));
+            ctx.clearRect(0, 0, W, H);
+
+            ctx.fillStyle = '#64748b';
+            ctx.font = 'bold 10px Cairo';
+            ctx.textAlign = 'right';
+            ctx.fillText('مخطط الدارة: مولد منحدر مشترك + مقارن + عداد رقمي', W - 10, 16);
+
+            const topY = H * 0.34;
+            const botY = H * 0.74;
+
+            // Vin Input
+            drawBlock(ctx, 14, topY - 18, 56, 32, 'Vin', `${vin.toFixed(2)}V`, '#10b981', true);
+            drawWire(ctx, 70, topY - 6, 125, topY - 6, '#10b981', true);
+
+            // Shared Ramp Generator Block
+            drawBlock(ctx, 14, botY - 18, 76, 36, 'Ramp Gen', `Vramp=${ss.vramp.toFixed(2)}V`, '#fb7185', !ss.done);
+            drawWire(ctx, 90, botY, 105, botY, '#fb7185', !ss.done);
+            drawWire(ctx, 105, botY, 105, topY + 10, '#fb7185', !ss.done);
+            drawWire(ctx, 105, topY + 10, 125, topY + 10, '#fb7185', !ss.done);
+
+            // Comparator
+            drawComparator(ctx, 125, topY + 2, !ss.compTriggered, '#fb7185');
+
+            // Latch / Gate Wire to Digital Counter
+            drawWire(ctx, 165, topY + 2, 195, topY + 2, !ss.compTriggered ? '#fb7185' : '#475569', !ss.compTriggered);
+
+            // Digital Counter Block
+            drawBlock(ctx, 195, topY - 22, 82, 48, `${N}-Bit Counter`, `Count=${ss.count}`, '#f43f5e', !ss.done);
+
+            // High-speed Clock input to Counter
+            drawWire(ctx, 236, botY, 236, topY + 26, '#94a3b8', !ss.done);
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = 'bold 9px JetBrains Mono';
+            ctx.textAlign = 'center';
+            ctx.fillText('CLK (2^N)', 236, botY + 12);
+        }
+
+        // --- 2B. SS ADC OSCILLOSCOPE WAVEFORM ---
+        function drawSsWaveform() {
+            const { ctx, W, H } = setupHiDPICanvas(document.getElementById('ssWaveCanvas'));
+            drawOscilloscopeGrid(ctx, W, H, `راسم الإشارة: تصاعد Vramp الخطي حتى تقاطع Vin (حتى ${ss.maxCount} دورة)`);
+
+            const padL = 36, padR = 14, padT = 24, padB = 22;
+            const plotW = W - padL - padR;
+            const plotH = H - padT - padB;
+
+            // Vin line
+            const vinY = padT + plotH * (1 - vin / VREF);
+            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(padL, vinY); ctx.lineTo(padL + plotW, vinY); ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Ramp Line
+            if (ss.history.length > 0) {
+                ctx.strokeStyle = '#fb7185';
+                ctx.lineWidth = 2.2;
+                ctx.beginPath();
+                ss.history.forEach((pt, idx) => {
+                    const x = padL + (pt.cycle / ss.maxCount) * plotW;
+                    const y = padT + plotH * (1 - Math.min(1, pt.vramp / VREF));
+                    if (idx === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+
+                const lastPt = ss.history[ss.history.length - 1];
+                const lx = padL + (lastPt.cycle / ss.maxCount) * plotW;
+                const ly = padT + plotH * (1 - Math.min(1, lastPt.vramp / VREF));
+                ctx.fillStyle = ss.done ? '#34d399' : '#fda4af';
+                ctx.beginPath(); ctx.arc(lx, ly, 4, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+
+        // --- 3A. HYBRID SS-SAR SCHEMATIC ---
+        function drawHybridSchematic() {
+            const { ctx, W, H } = setupHiDPICanvas(document.getElementById('hybCircuitCanvas'));
+            ctx.clearRect(0, 0, W, H);
+
+            ctx.fillStyle = '#64748b';
+            ctx.font = 'bold 10px Cairo';
+            ctx.textAlign = 'right';
+            ctx.fillText(`مخطط الهجين: مرحلة 1 (${M}b SAR) + مرحلة 2 (${N - M}b Fine SS)`, W - 10, 16);
+
+            const midY = H * 0.42;
+            const dacY = H * 0.78;
+
+            // Vin
+            drawBlock(ctx, 12, midY - 22, 48, 32, 'S/H', `${vin.toFixed(2)}V`, '#10b981', true);
+            drawWire(ctx, 60, midY - 8, 118, midY - 8, '#10b981', true);
+
+            // Comparator
+            drawComparator(ctx, 118, midY, hyb.compHigh, '#fbbf24');
+
+            // Control Logic Split (Coarse SAR + Fine Counter)
+            drawWire(ctx, 158, midY, 185, midY, '#fbbf24', !hyb.done);
+            drawBlock(ctx, 185, midY - 24, 92, 48, 'Hybrid Ctrl', hyb.phase === 'COARSE_SAR' ? `1: SAR (${M}b)` : (hyb.phase === 'FINE_SS' ? `2: SS (${N - M}b)` : 'Complete'), '#fbbf24', !hyb.done);
+
+            // Combined Coarse CDAC + Fine Ramp Adder at Bottom
+            drawWire(ctx, 231, midY + 24, 231, dacY, '#fbbf24', !hyb.done);
+            drawWire(ctx, 231, dacY, 195, dacY, '#fbbf24', !hyb.done);
+
+            drawBlock(ctx, 92, dacY - 18, 103, 36, 'Coarse DAC + Fine Ramp', `V=${hyb.vdac.toFixed(2)}V`, '#f59e0b', true);
+
+            // Feedback to Comparator (-)
+            drawWire(ctx, 92, dacY, 82, dacY, '#f59e0b', true);
+            drawWire(ctx, 82, dacY, 82, midY + 10, '#f59e0b', true);
+            drawWire(ctx, 82, midY + 10, 118, midY + 10, '#f59e0b', true);
+        }
+
+        // --- 3B. HYBRID SS-SAR OSCILLOSCOPE WAVEFORM ---
+        function drawHybridWaveform() {
+            const { ctx, W, H } = setupHiDPICanvas(document.getElementById('hybWaveCanvas'));
+            const maxHybCycles = M + Math.pow(2, N - M);
+            drawOscilloscopeGrid(ctx, W, H, `راسم الإشارة: قفزات SAR الخشنة ثم منحدر SS الدقيق (${maxHybCycles} دورة)`);
+
+            const padL = 36, padR = 14, padT = 24, padB = 22;
+            const plotW = W - padL - padR;
+            const plotH = H - padT - padB;
+
+            // Vin line
+            const vinY = padT + plotH * (1 - vin / VREF);
+            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(padL, vinY); ctx.lineTo(padL + plotW, vinY); ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Phase 1 / Phase 2 Divider Line at cycle = M
+            const splitX = padL + (M / maxHybCycles) * plotW;
+            ctx.setLineDash([2, 3]);
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
+            ctx.beginPath(); ctx.moveTo(splitX, padT); ctx.lineTo(splitX, padT + plotH); ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Plot Hybrid Waveform
+            if (hyb.history.length > 0) {
+                for (let idx = 1; idx < hyb.history.length; idx++) {
+                    const prev = hyb.history[idx - 1];
+                    const curr = hyb.history[idx];
+                    const x1 = padL + (prev.cycle / maxHybCycles) * plotW;
+                    const y1 = padT + plotH * (1 - Math.min(1, prev.v / VREF));
+                    const x2 = padL + (curr.cycle / maxHybCycles) * plotW;
+                    const y2 = padT + plotH * (1 - Math.min(1, curr.v / VREF));
+
+                    ctx.strokeStyle = curr.phase === 'COARSE_SAR' ? '#22d3ee' : '#fbbf24';
+                    ctx.lineWidth = 2.3;
+                    ctx.beginPath();
+                    if (curr.phase === 'COARSE_SAR') {
+                        ctx.moveTo(x1, y1);
+                        ctx.lineTo(x2, y1);
+                        ctx.lineTo(x2, y2);
+                    } else {
+                        ctx.moveTo(x1, y1);
+                        ctx.lineTo(x2, y2);
+                    }
+                    ctx.stroke();
+                }
+
+                const lastPt = hyb.history[hyb.history.length - 1];
+                const lx = padL + (lastPt.cycle / maxHybCycles) * plotW;
+                const ly = padT + plotH * (1 - Math.min(1, lastPt.v / VREF));
+                ctx.fillStyle = hyb.done ? '#34d399' : '#fde68a';
+                ctx.beginPath(); ctx.arc(lx, ly, 3.5, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+
+        // ================= HELPER DRAWING PRIMITIVES =================
+        function drawBlock(ctx, x, y, w, h, title, subtitle, color, active) {
+            ctx.fillStyle = active ? 'rgba(15, 23, 42, 0.95)' : 'rgba(9, 13, 24, 0.9)';
+            ctx.strokeStyle = active ? color : '#334155';
+            ctx.lineWidth = active ? 1.8 : 1.2;
+            ctx.beginPath();
+            ctx.roundRect(x, y, w, h, 7);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = active ? '#f8fafc' : '#94a3b8';
+            ctx.font = 'bold 9px JetBrains Mono';
+            ctx.textAlign = 'center';
+            ctx.fillText(title, x + w / 2, y + h * 0.44);
+
+            if (subtitle) {
+                ctx.fillStyle = active ? color : '#64748b';
+                ctx.font = '8px JetBrains Mono';
+                ctx.fillText(subtitle, x + w / 2, y + h * 0.80);
+            }
+        }
+
+        function drawComparator(ctx, x, y, high, activeColor) {
+            ctx.fillStyle = '#0f172a';
+            ctx.strokeStyle = high ? activeColor : '#64748b';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x, y - 20);
+            ctx.lineTo(x + 40, y);
+            ctx.lineTo(x, y + 20);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#10b981';
+            ctx.font = 'bold 10px JetBrains Mono';
+            ctx.textAlign = 'left';
+            ctx.fillText('+', x + 4, y - 5);
+            ctx.fillStyle = '#f43f5e';
+            ctx.fillText('-', x + 4, y + 12);
+        }
+
+        function drawWire(ctx, x1, y1, x2, y2, color, active) {
+            ctx.strokeStyle = active ? color : '#334155';
+            ctx.lineWidth = active ? 2 : 1.2;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
+
+        function drawOscilloscopeGrid(ctx, W, H, title) {
+            ctx.clearRect(0, 0, W, H);
+            const padL = 36, padR = 14, padT = 24, padB = 22;
+            const plotW = W - padL - padR;
+            const plotH = H - padT - padB;
+
+            // Title
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = 'bold 10px Cairo';
+            ctx.textAlign = 'right';
+            ctx.fillText(title, W - 10, 15);
+
+            // Grid Lines
+            ctx.strokeStyle = 'rgba(30, 41, 59, 0.55)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const y = padT + (plotH / 4) * i;
+                ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + plotW, y); ctx.stroke();
+
+                const vLabel = (VREF * (1 - i / 4)).toFixed(1) + 'V';
+                ctx.fillStyle = '#64748b';
+                ctx.font = '8px JetBrains Mono';
+                ctx.textAlign = 'right';
+                ctx.fillText(vLabel, padL - 4, y + 3);
+            }
+
+            // Border
+            ctx.strokeStyle = '#1e293b';
+            ctx.strokeRect(padL, padT, plotW, plotH);
+        }
+
+        // ================= ANIMATION LOOP & EVENT HANDLERS =================
+        function loop(timestamp) {
+            const intervals = [0, 650, 350, 160, 70, 25];
+            const interval = intervals[speedLevel];
+
+            if (isPlaying && !(sar.done && ss.done && hyb.done)) {
+                if (timestamp - lastTick >= interval) {
+                    stepAll();
+                    lastTick = timestamp;
+                }
+            }
+            requestAnimationFrame(loop);
+        }
+
+        // Vin Slider
+        document.getElementById('vinSlider').addEventListener('input', (e) => {
+            vin = parseFloat(e.target.value);
+            document.getElementById('vinDisplay').textContent = `${vin.toFixed(2)}V`;
+            resetAll();
+        });
+
+        // Resolution Selector
+        document.getElementById('resSelect').addEventListener('change', (e) => {
+            N = parseInt(e.target.value);
+            resetAll();
+        });
+
+        // Play / Pause
+        document.getElementById('playPauseBtn').addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            document.getElementById('playIcon').textContent = isPlaying ? '⏸️' : '▶️';
+            document.getElementById('playText').textContent = isPlaying ? 'إيقاف' : 'تشغيل';
+        });
+
+        // Step Button
+        document.getElementById('stepBtn').addEventListener('click', () => {
+            isPlaying = false;
+            document.getElementById('playIcon').textContent = '▶️';
+            document.getElementById('playText').textContent = 'تشغيل';
+            stepAll();
+        });
+
+        // Reset Button
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            resetAll();
+            isPlaying = true;
+            document.getElementById('playIcon').textContent = '⏸️';
+            document.getElementById('playText').textContent = 'إيقاف';
+        });
+
+        // Speed Slider
+        document.getElementById('speedSlider').addEventListener('input', (e) => {
+            speedLevel = parseInt(e.target.value);
+        });
+
+        // View Tabs (All vs Single Focused Architecture)
+        document.querySelectorAll('.view-tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.view-tab').forEach(b => {
+                    b.className = 'view-tab px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition cursor-pointer';
+                });
+                btn.className = 'view-tab active px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-white shadow transition cursor-pointer';
+
+                const view = btn.dataset.view;
+                const container = document.getElementById('cardsContainer');
+                const cSar = document.getElementById('card-sar');
+                const cSs = document.getElementById('card-ss');
+                const cHyb = document.getElementById('card-hybrid');
+
+                if (view === 'all') {
+                    container.className = 'grid grid-cols-1 lg:grid-cols-3 gap-6';
+                    cSar.classList.remove('hidden');
+                    cSs.classList.remove('hidden');
+                    cHyb.classList.remove('hidden');
+                } else {
+                    container.className = 'grid grid-cols-1 max-w-3xl mx-auto w-full gap-6';
+                    cSar.classList.toggle('hidden', view !== 'sar');
+                    cSs.classList.toggle('hidden', view !== 'ss');
+                    cHyb.classList.toggle('hidden', view !== 'hybrid');
+                }
+                setTimeout(renderAllCanvases, 30);
+            });
+        });
+
+        window.addEventListener('resize', renderAllCanvases);
+
+        // Boot
+        resetAll();
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>
