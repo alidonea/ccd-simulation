@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>معمارية حساس CMOS (4T-APS): العنونة المباشرة والقراءة المتوازية</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -11,6 +11,7 @@
             font-family: 'Cairo', sans-serif;
             background-color: #050811;
             color: #e2e8f0;
+            -webkit-tap-highlight-color: transparent;
         }
         .font-mono-tech {
             font-family: 'JetBrains Mono', monospace;
@@ -20,18 +21,18 @@
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col selection:bg-emerald-500 selection:text-slate-950">
+<body class="min-h-screen flex flex-col selection:bg-emerald-500 selection:text-slate-950 overflow-x-hidden">
 
     <!-- Top Navigation & Controls Header -->
-    <header class="bg-slate-900/90 border-b border-slate-800 px-6 py-3.5 sticky top-0 z-20 backdrop-blur-md shadow-xl">
+    <header class="bg-slate-900/90 border-b border-slate-800 px-4 md:px-6 py-3.5 sticky top-0 z-25 backdrop-blur-md shadow-xl">
         <div class="max-w-[1440px] mx-auto flex flex-col lg:flex-row justify-between items-center gap-4">
             <!-- Title -->
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-xl shadow-inner">
+            <div class="flex items-center gap-3 w-full lg:w-auto">
+                <div class="w-10 h-10 shrink-0 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-xl shadow-inner">
                     ⚡
                 </div>
                 <div>
-                    <h1 class="text-lg md:text-xl font-black text-white tracking-tight">
+                    <h1 class="text-base md:text-xl font-black text-white tracking-tight">
                         المخطط المعماري لحساس <span class="text-emerald-400">CMOS (4T-APS)</span> والقراءة المتوازية
                     </h1>
                     <p class="text-xs text-slate-400">بنية البكسل النشط (4 ترانزستورات)، نواقل الأعمدة، ومحولات ADC المتوازية لكل عمود</p>
@@ -39,73 +40,73 @@
             </div>
 
             <!-- Interactive Controls -->
-            <div class="flex flex-wrap items-center justify-center gap-2.5">
-                <button id="playPauseBtn" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 rounded-xl shadow-lg shadow-emerald-500/20 transition flex items-center gap-2 text-sm cursor-pointer">
+            <div class="flex flex-wrap items-center justify-center lg:justify-end gap-2 w-full lg:w-auto">
+                <button id="playPauseBtn" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3.5 py-2 rounded-xl shadow-lg shadow-emerald-500/20 transition flex items-center gap-2 text-xs md:text-sm cursor-pointer min-h-[44px]">
                     <span id="playIcon">⏸️</span>
                     <span id="playText">إيقاف مؤقت</span>
                 </button>
 
-                <button id="stepBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-100 font-semibold px-4 py-2 rounded-xl border border-slate-700 transition flex items-center gap-1.5 text-sm cursor-pointer">
+                <button id="stepBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-100 font-semibold px-3.5 py-2 rounded-xl border border-slate-700 transition flex items-center gap-1.5 text-xs md:text-sm cursor-pointer min-h-[44px]">
                     <span>خطوة واحدة</span>
                     <span class="text-emerald-400">⏭️</span>
                 </button>
 
-                <button id="resetBtn" class="bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 font-semibold px-4 py-2 rounded-xl border border-amber-500/30 transition flex items-center gap-1.5 text-sm cursor-pointer">
-                    <span>إعادة التعرض الضوئي</span>
+                <button id="resetBtn" class="bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 font-semibold px-3.5 py-2 rounded-xl border border-amber-500/30 transition flex items-center gap-1.5 text-xs md:text-sm cursor-pointer min-h-[44px]">
+                    <span>إعادة التعرض</span>
                     <span>📸</span>
                 </button>
 
                 <!-- Speed Control -->
-                <div class="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 mr-1">
+                <div class="flex items-center gap-2 bg-slate-950 px-3 py-2 rounded-xl border border-slate-800">
                     <span class="text-xs text-slate-400 font-semibold">السرعة:</span>
-                    <input id="speedSlider" type="range" min="1" max="5" value="2" class="w-20 accent-emerald-400 cursor-pointer">
-                    <span id="speedLabel" class="text-xs font-bold text-emerald-400 w-10 text-center">متوسط</span>
+                    <input id="speedSlider" type="range" min="1" max="5" value="2" class="w-16 md:w-20 accent-emerald-400 cursor-pointer">
+                    <span id="speedLabel" class="text-xs font-bold text-emerald-400 w-12 text-center">متوسط</span>
                 </div>
             </div>
         </div>
     </header>
 
     <!-- Live Status Banner -->
-    <div class="bg-slate-900/60 border-b border-slate-800/80 px-6 py-2.5">
-        <div class="max-w-[1440px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-            <div class="flex items-center gap-2.5">
-                <span id="phaseBadge" class="px-2.5 py-0.5 rounded-md text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 whitespace-nowrap">
+    <div class="bg-slate-900/60 border-b border-slate-800/80 px-4 md:px-6 py-2.5">
+        <div class="max-w-[1440px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-right">
+            <div class="flex flex-col sm:flex-row items-center gap-2.5">
+                <span id="phaseBadge" class="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 whitespace-nowrap">
                     التعرض الضوئي
                 </span>
-                <p id="liveBannerText" class="text-sm font-bold text-slate-100">
+                <p id="liveBannerText" class="text-xs md:text-sm font-bold text-slate-100">
                     التعرض للضوء: تتراكم الإلكترونات داخل الديود الضوئي (PD) في كل بكسل بشكل مستقل.
                 </p>
             </div>
-            <div class="text-xs text-slate-400 font-mono-tech flex items-center gap-4 shrink-0">
-                <span>السطر المفعّل: <strong id="activeRowDisplay" class="text-emerald-400">---</strong></span>
-                <span>البكسلات المحولة: <strong id="pixelsReadCount" class="text-amber-400">0 / 16</strong></span>
+            <div class="text-xs text-slate-400 font-mono-tech flex items-center gap-4 shrink-0 pt-1 sm:pt-0">
+                <span>السطر: <strong id="activeRowDisplay" class="text-emerald-400">---</strong></span>
+                <span>المحولة: <strong id="pixelsReadCount" class="text-amber-400">0 / 16</strong></span>
             </div>
         </div>
     </div>
 
     <!-- Main Workspace -->
-    <main class="flex-1 max-w-[1440px] w-full mx-auto p-4 md:p-6 grid grid-cols-1 xl:grid-cols-12 gap-6">
+    <main class="flex-1 max-w-[1440px] w-full mx-auto p-3 md:p-6 grid grid-cols-1 xl:grid-cols-12 gap-6">
         
         <!-- Interactive Schematic Canvas (9 Columns) -->
         <div class="xl:col-span-9 bg-slate-900/70 border border-slate-800 rounded-2xl p-3 flex flex-col shadow-2xl relative">
-            <div class="flex-1 relative bg-[#04070f] rounded-xl border border-slate-800/90 overflow-hidden min-h-[600px]">
+            <div class="flex-1 relative bg-[#04070f] rounded-xl border border-slate-800/90 overflow-hidden min-h-[450px] md:min-h-[580px]">
                 <canvas id="cmosCanvas" class="w-full h-full block"></canvas>
             </div>
             
             <!-- Schematic Legend Bar -->
-            <div class="mt-3 pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-4 px-2 text-xs text-slate-400">
-                <div class="flex flex-wrap items-center gap-4">
+            <div class="mt-3 pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 px-2 text-[11px] md:text-xs text-slate-400">
+                <div class="flex flex-wrap items-center gap-3">
                     <span class="flex items-center gap-1.5">
                         <span class="w-3 h-3 rounded-sm bg-cyan-400 shadow-[0_0_8px_#22d3ee]"></span>
-                        الديود الضوئي (PD) والشحنة المتجمعة
+                        الديود الضوئي (PD)
                     </span>
                     <span class="flex items-center gap-1.5">
                         <span class="w-3 h-3 rounded-sm bg-emerald-400 shadow-[0_0_8px_#34d399]"></span>
-                        خط تحكم مفعّل (+3.3V)
+                        خط تحكم مفعّل
                     </span>
                     <span class="flex items-center gap-1.5">
                         <span class="w-3 h-3 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]"></span>
-                        عقدة الانتشار العائم (FD) ومضخم البكسل (SF)
+                        عقدة FD ومضخم SF
                     </span>
                 </div>
                 <span class="text-emerald-400/90 font-semibold">ميزة CMOS: لا تنتقل الشحنات بين البكسلات؛ بل يُقرأ الجهد مباشرة!</span>
@@ -124,21 +125,21 @@
                 <!-- 3 Control Lines for Active Row -->
                 <div class="mb-4">
                     <div class="text-xs font-semibold text-emerald-400 mb-2 flex justify-between">
-                        <span>خطوط التحكم الأفقية (Row Bus):</span>
+                        <span>خطوط التحكم الأفقية:</span>
                         <span id="rowLabelTag" class="font-mono-tech text-slate-400">Row -</span>
                     </div>
                     <div class="grid grid-cols-3 gap-2 text-center font-mono-tech">
                         <div id="card-sel" class="p-2 rounded-xl border border-slate-800 bg-slate-950 transition-all">
-                            <div class="text-[11px] text-slate-400">SEL (اختيار)</div>
-                            <div id="val-sel" class="text-sm font-bold mt-0.5 text-slate-600">0V</div>
+                            <div class="text-[11px] text-slate-400">SEL</div>
+                            <div id="val-sel" class="text-xs md:text-sm font-bold mt-0.5 text-slate-600">0V</div>
                         </div>
                         <div id="card-rst" class="p-2 rounded-xl border border-slate-800 bg-slate-950 transition-all">
-                            <div class="text-[11px] text-slate-400">RST (تصفير)</div>
-                            <div id="val-rst" class="text-sm font-bold mt-0.5 text-slate-600">0V</div>
+                            <div class="text-[11px] text-slate-400">RST</div>
+                            <div id="val-rst" class="text-xs md:text-sm font-bold mt-0.5 text-slate-600">0V</div>
                         </div>
                         <div id="card-tx" class="p-2 rounded-xl border border-slate-800 bg-slate-950 transition-all">
-                            <div class="text-[11px] text-slate-400">TX (نقل)</div>
-                            <div id="val-tx" class="text-sm font-bold mt-0.5 text-slate-600">0V</div>
+                            <div class="text-[11px] text-slate-400">TX</div>
+                            <div id="val-tx" class="text-xs md:text-sm font-bold mt-0.5 text-slate-600">0V</div>
                         </div>
                     </div>
                 </div>
@@ -149,19 +150,19 @@
                     <div class="grid grid-cols-4 gap-1.5 text-center font-mono-tech">
                         <div id="col-box-0" class="p-1.5 rounded-lg border border-slate-800 bg-slate-950">
                             <div class="text-[10px] text-slate-500">Col 0</div>
-                            <div id="col-v-0" class="text-xs font-bold text-slate-400">-- V</div>
+                            <div id="col-v-0" class="text-[11px] md:text-xs font-bold text-slate-400">-- V</div>
                         </div>
                         <div id="col-box-1" class="p-1.5 rounded-lg border border-slate-800 bg-slate-950">
                             <div class="text-[10px] text-slate-500">Col 1</div>
-                            <div id="col-v-1" class="text-xs font-bold text-slate-400">-- V</div>
+                            <div id="col-v-1" class="text-[11px] md:text-xs font-bold text-slate-400">-- V</div>
                         </div>
                         <div id="col-box-2" class="p-1.5 rounded-lg border border-slate-800 bg-slate-950">
                             <div class="text-[10px] text-slate-500">Col 2</div>
-                            <div id="col-v-2" class="text-xs font-bold text-slate-400">-- V</div>
+                            <div id="col-v-2" class="text-[11px] md:text-xs font-bold text-slate-400">-- V</div>
                         </div>
                         <div id="col-box-3" class="p-1.5 rounded-lg border border-slate-800 bg-slate-950">
                             <div class="text-[10px] text-slate-500">Col 3</div>
-                            <div id="col-v-3" class="text-xs font-bold text-slate-400">-- V</div>
+                            <div id="col-v-3" class="text-[11px] md:text-xs font-bold text-slate-400">-- V</div>
                         </div>
                     </div>
                 </div>
@@ -177,17 +178,17 @@
                 </div>
                 
                 <p class="text-xs text-slate-400 mb-3 leading-relaxed">
-                    بفضل وجود <strong class="text-slate-200">محول ADC مستقل لكل عمود</strong>، يتم تحويل <strong class="text-emerald-400">4 بكسلات دفعة واحدة</strong> في كل دورة سطر!
+                    بوجود <strong class="text-slate-200">محول ADC مستقل لكل عمود</strong>، يتم تحويل <strong class="text-emerald-400">4 بكسلات دفعة واحدة</strong>!
                 </p>
 
                 <!-- 4x4 Reconstructed Grid -->
-                <div id="digitalGrid" class="grid grid-cols-4 gap-1.5 bg-slate-950 p-2.5 rounded-xl border border-slate-800 aspect-square max-w-[225px] w-full mx-auto my-auto">
+                <div id="digitalGrid" class="grid grid-cols-4 gap-1.5 bg-slate-950 p-2.5 rounded-xl border border-slate-800 aspect-square max-w-[200px] w-full mx-auto my-auto">
                     <!-- Populated via JS -->
                 </div>
 
                 <!-- Parallel Output Log -->
                 <div class="mt-3 pt-2 border-t border-slate-800/80">
-                    <div class="text-[11px] text-slate-400 mb-1">آخر سطر حُوِّل بالتوازي (4 قيم معاً):</div>
+                    <div class="text-[11px] text-slate-400 mb-1">آخر سطر حُوِّل بالتوازي:</div>
                     <div id="lastAdcReadout" class="bg-slate-950 px-3 py-2 rounded-lg border border-slate-800 font-mono-tech text-xs text-emerald-400 text-center">
                         في انتظار قراءة السطر الأول...
                     </div>
@@ -218,22 +219,16 @@
             [60,  150, 180, 90]
         ];
 
-        // Pixel State Objects:
-        // pdCharge: 0..255 (electrons in Photodiode)
-        // fdCharge: 0..255 (electrons transferred to Floating Diffusion)
-        // fdVoltage: 3.3V (reset) down to ~1.2V (full charge)
         let pixels = [];
         let reconstructedPixels = Array(ROWS * COLS).fill(null);
 
-        // Readout State Machine:
-        // Phases: 'EXPOSE', 'ROW_RESET', 'ROW_TRANSFER', 'ROW_ADC', 'COMPLETE'
         let phase = 'EXPOSE';
         let activeRow = -1;
         let selActive = false;
         let rstActive = false;
         let txActive = false;
-        let colVoltages = [null, null, null, null]; // Analog voltages on the 4 vertical column buses
-        let colPulseAnim = 0; // Visual pulse progress 0..1
+        let colVoltages = [null, null, null, null];
+        let colPulseAnim = 0;
 
         let phaseBadgeText = '1. التعرض الضوئي';
         let statusBannerText = 'مرحلة التعرض للضوء: الفوتونات تسقط على الديودات الضوئية (PD) وتولد إلكترونات داخل كل بكسل.';
@@ -249,7 +244,7 @@
                         targetCharge: sampleImagePattern[r][c],
                         pdCharge: sampleImagePattern[r][c],
                         fdCharge: 0,
-                        fdVoltage: 2.8, // Floating voltage before reset
+                        fdVoltage: 2.8,
                         readDone: false
                     });
                 }
@@ -264,37 +259,32 @@
             colVoltages = [null, null, null, null];
             colPulseAnim = 0;
 
-            phaseBadgeText = '1. التعرض الضوئي (Integration)';
-            statusBannerText = 'تم تجميع الشحنات الضوئية داخل الديود الضوئي (PD) لكل بكسل. ستبدأ الآن القراءة السطرية المباشرة (Rolling Shutter).';
+            phaseBadgeText = '1. التعرض الضوئي';
+            statusBannerText = 'تم تجميع الشحنات الضوئية داخل الديود الضوئي (PD). ستبدأ القراءة السطرية المباشرة.';
             document.getElementById('lastAdcReadout').textContent = 'في انتظار قراءة السطر الأول...';
             updateUI();
         }
 
-        // Advance one exact architectural step
         function stepSimulation() {
             if (phase === 'COMPLETE') return;
 
             if (phase === 'EXPOSE') {
-                // Start reading Row 0
                 activeRow = 0;
                 startRowReset();
                 return;
             }
 
             if (phase === 'ROW_RESET') {
-                // Move to Charge Transfer (TX = +3.3V) for activeRow
                 startRowTransfer();
                 return;
             }
 
             if (phase === 'ROW_TRANSFER') {
-                // Move to Parallel Column ADC conversion for activeRow
                 startRowAdc();
                 return;
             }
 
             if (phase === 'ROW_ADC') {
-                // Move to next row or complete
                 if (activeRow + 1 < ROWS) {
                     activeRow++;
                     startRowReset();
@@ -306,7 +296,7 @@
                     txActive = false;
                     colVoltages = [null, null, null, null];
                     phaseBadgeText = 'اكتملت القراءة';
-                    statusBannerText = 'تمت قراءة جميع الصفوف الأربعة وتحويلها رقمياً بنجاح! اضغط "إعادة التعرض الضوئي" للتكرار.';
+                    statusBannerText = 'تمت قراءة جميع الصفوف الأربعة وتحويلها رقمياً بنجاح! اضغط "إعادة التعرض" للتكرار.';
                     updateUI();
                 }
                 return;
@@ -320,42 +310,35 @@
             txActive = false;
             colPulseAnim = 0;
 
-            // Reset Floating Diffusion (FD) to VDD (3.3V) for all 4 pixels in activeRow
             for (let c = 0; c < COLS; c++) {
                 pixels[activeRow][c].fdCharge = 0;
                 pixels[activeRow][c].fdVoltage = 3.30;
-                // Source Follower (SF) buffers the reset voltage (~2.60V after Vth drop) onto Column Bus
                 colVoltages[c] = 2.60;
             }
 
-            phaseBadgeText = `2. تصفير السطر ${activeRow} (Reset & CDS Ref)`;
-            statusBannerText = `السطر ${activeRow}: تفعيل SEL[+3.3V] و RST[+3.3V] لتفريغ عقدة الانتشار العائم (FD) إلى جهد VDD، وإرسال جهد المرجع عبر نواقل الأعمدة.`;
+            phaseBadgeText = `2. تصفير السطر ${activeRow}`;
+            statusBannerText = `السطر ${activeRow}: تفعيل SEL و RST لتفريغ عقدة الانتشار العائم (FD) وإرسال جهد المرجع.`;
             updateUI();
         }
 
         function startRowTransfer() {
             phase = 'ROW_TRANSFER';
             selActive = true;
-            rstActive = false; // RST turns OFF
-            txActive = true;   // TX turns ON (+3.3V)
+            rstActive = false;
+            txActive = true;
             colPulseAnim = 0;
 
-            // Transfer photo-electrons from Photodiode (PD) to Floating Diffusion (FD) locally inside each pixel of activeRow
             for (let c = 0; c < COLS; c++) {
                 const px = pixels[activeRow][c];
                 px.fdCharge = px.pdCharge;
                 px.pdCharge = 0;
-
-                // More electrons = bigger voltage drop at Floating Diffusion (FD)
                 const voltageDrop = (px.fdCharge / 255) * 1.40;
                 px.fdVoltage = Number((3.30 - voltageDrop).toFixed(2));
-
-                // Source Follower (SF) amplifies/buffers this voltage onto the vertical Column Bus
                 colVoltages[c] = Number((2.60 - voltageDrop).toFixed(2));
             }
 
-            phaseBadgeText = `3. نقل الشحنة موضعياً (TX = +3.3V)`;
-            statusBannerText = `السطر ${activeRow}: فتح بوابة النقل TX[+3.3V] فتنزلق الإلكترونات من PD إلى FD داخل نفس البكسل، مما يخفض جهد FD وينقله مضخم SF لأسفل العمود.`;
+            phaseBadgeText = `3. نقل الشحنة (TX = +3.3V)`;
+            statusBannerText = `السطر ${activeRow}: فتح بوابة TX لانتقال الشحنة من PD إلى FD محلياً داخل كل بكسل.`;
             updateUI();
         }
 
@@ -363,7 +346,7 @@
             phase = 'ROW_ADC';
             selActive = true;
             rstActive = false;
-            txActive = false; // TX turns OFF
+            txActive = false;
             colPulseAnim = 0;
 
             const rowVals = [];
@@ -375,8 +358,8 @@
                 rowVals.push(px.targetCharge);
             }
 
-            phaseBadgeText = `4. التحويل المتوازي (Column ADCs)`;
-            statusBannerText = `السطر ${activeRow}: محولات ADC الأربعة تقيس الفرق بين جهد المرجع وجهد الإشارة (CDS) وتحوّل البكسلات الأربعة رقمياً في آنٍ واحد!`;
+            phaseBadgeText = `4. التحويل المتوازي`;
+            statusBannerText = `السطر ${activeRow}: محولات ADC الأربعة تحول البكسلات الأربعة رقمياً في آنٍ واحد!`;
             document.getElementById('lastAdcReadout').textContent = `Row ${activeRow} → [ ${rowVals.join(' , ')} ]`;
             updateUI();
         }
@@ -390,27 +373,24 @@
             document.getElementById('rowLabelTag').textContent = activeRow >= 0 ? `Row ${activeRow}` : 'Row -';
             document.getElementById('pixelsReadCount').textContent = `${readCount} / ${ROWS * COLS}`;
 
-            // Update Row Control Cards (SEL, RST, TX)
             updateControlCard('sel', selActive, 'emerald');
             updateControlCard('rst', rstActive, 'rose');
             updateControlCard('tx', txActive, 'cyan');
 
-            // Update 4 Column Bus Voltage Displays
             for (let c = 0; c < COLS; c++) {
                 const box = document.getElementById(`col-box-${c}`);
                 const valEl = document.getElementById(`col-v-${c}`);
                 if (colVoltages[c] !== null) {
                     box.className = 'p-1.5 rounded-lg border border-amber-400/70 bg-amber-950/40 shadow-[0_0_10px_rgba(251,191,36,0.15)] transition-all';
                     valEl.textContent = `${colVoltages[c].toFixed(2)}V`;
-                    valEl.className = 'text-xs font-bold text-amber-300';
+                    valEl.className = 'text-[11px] md:text-xs font-bold text-amber-300';
                 } else {
                     box.className = 'p-1.5 rounded-lg border border-slate-800 bg-slate-950 transition-all';
                     valEl.textContent = '-- V';
-                    valEl.className = 'text-xs font-bold text-slate-600';
+                    valEl.className = 'text-[11px] md:text-xs font-bold text-slate-600';
                 }
             }
 
-            // Render Reconstructed Digital Image Grid
             const gridContainer = document.getElementById('digitalGrid');
             gridContainer.innerHTML = '';
             for (let i = 0; i < ROWS * COLS; i++) {
@@ -441,11 +421,11 @@
                 };
                 card.className = `p-2 rounded-xl border transition-all ${colorMap[color]}`;
                 val.textContent = '+3.3V';
-                val.className = `text-sm font-bold mt-0.5`;
+                val.className = `text-xs md:text-sm font-bold mt-0.5`;
             } else {
                 card.className = 'p-2 rounded-xl border border-slate-800 bg-slate-950 transition-all';
                 val.textContent = '0V';
-                val.className = 'text-sm font-bold mt-0.5 text-slate-600';
+                val.className = 'text-xs md:text-sm font-bold mt-0.5 text-slate-600';
             }
         }
 
@@ -458,7 +438,6 @@
         }
         window.addEventListener('resize', resizeCanvas);
 
-        // Main Architectural Schematic Renderer
         function drawSchematic() {
             const rect = canvas.parentElement.getBoundingClientRect();
             const W = rect.width;
@@ -466,7 +445,6 @@
 
             ctx.clearRect(0, 0, W, H);
 
-            // Subtle EDA Blueprint Grid
             ctx.strokeStyle = 'rgba(30, 41, 59, 0.35)';
             ctx.lineWidth = 1;
             const spacing = 24;
@@ -477,16 +455,17 @@
                 ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
             }
 
-            // Layout Dimensions
-            const leftDecoderW = Math.max(125, W * 0.17);
-            const rightMargin = 24;
-            const topMargin = 45;
-            const bottomReadoutH = 115;
+            // تكييف العرض التلقائي ليتناسب مع شاشات الهواتف المحمولة الضيقة
+            const isMobile = W < 600;
+            const leftDecoderW = isMobile ? Math.max(70, W * 0.18) : Math.max(125, W * 0.17);
+            const rightMargin = isMobile ? 12 : 24;
+            const topMargin = isMobile ? 35 : 45;
+            const bottomReadoutH = isMobile ? 90 : 115;
 
             const availW = W - leftDecoderW - rightMargin;
             const availH = H - topMargin - bottomReadoutH;
 
-            const cellW = Math.min(155, (availW - 30) / COLS);
+            const cellW = Math.min(155, (availW - (isMobile ? 10 : 30)) / COLS);
             const cellH = Math.min(96, (availH - 20) / ROWS);
 
             const gridTotalW = cellW * COLS;
@@ -495,41 +474,39 @@
             const gridStartX = leftDecoderW + (availW - gridTotalW) / 2;
             const gridStartY = topMargin + 8;
 
-            // Header Title on Canvas
-            ctx.fillStyle = '#94a3b8';
-            ctx.font = 'bold 13px Cairo';
-            ctx.textAlign = 'center';
-            ctx.fillText('مصفوفة البكسلات النشطة (4T-APS Pixel Array) - كل بكسل يحتوي على مضخمه الخاص', gridStartX + gridTotalW / 2, gridStartY - 18);
+            if (!isMobile) {
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = 'bold 12px Cairo';
+                ctx.textAlign = 'center';
+                ctx.fillText('مصفوفة البكسلات النشطة (4T-APS Pixel Array)', gridStartX + gridTotalW / 2, gridStartY - 14);
+            }
 
-            // Left Block: Row Decoder Box
-            const decoderX = 14;
-            const decoderW = leftDecoderW - 28;
+            const decoderX = isMobile ? 8 : 14;
+            const decoderW = leftDecoderW - (isMobile ? 12 : 28);
             ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
             ctx.strokeStyle = '#334155';
             ctx.lineWidth = 1.5;
             ctx.beginPath();
-            ctx.roundRect(decoderX, gridStartY, decoderW, gridTotalH, 10);
+            ctx.roundRect(decoderX, gridStartY, decoderW, gridTotalH, 8);
             ctx.fill();
             ctx.stroke();
 
             ctx.save();
-            ctx.translate(decoderX + 18, gridStartY + gridTotalH / 2);
+            ctx.translate(decoderX + (isMobile ? 12 : 18), gridStartY + gridTotalH / 2);
             ctx.rotate(-Math.PI / 2);
             ctx.fillStyle = '#64748b';
-            ctx.font = 'bold 12px Cairo';
+            ctx.font = isMobile ? 'bold 10px Cairo' : 'bold 12px Cairo';
             ctx.textAlign = 'center';
-            ctx.fillText('مفكك تشفير الصفوف (Row Decoder)', 0, 0);
+            ctx.fillText('مفكك الصفوف', 0, 0);
             ctx.restore();
 
-            // Draw Vertical Column Bitlines (4 readout buses running straight down to CDS + ADCs)
-            const cdsY = gridStartY + gridTotalH + 26;
-            const adcY = cdsY + 38;
+            const cdsY = gridStartY + gridTotalH + 20;
+            const adcY = cdsY + (isMobile ? 30 : 38);
 
             for (let c = 0; c < COLS; c++) {
-                const colBusX = gridStartX + c * cellW + cellW - 14;
+                const colBusX = gridStartX + c * cellW + cellW - (isMobile ? 8 : 14);
                 const isReadingCol = (activeRow >= 0 && selActive);
 
-                // Vertical Bitline Trace
                 ctx.strokeStyle = isReadingCol ? '#fbbf24' : '#334155';
                 ctx.lineWidth = isReadingCol ? 2.5 : 1.5;
                 if (isReadingCol) {
@@ -537,91 +514,76 @@
                     ctx.shadowBlur = 8;
                 }
                 ctx.beginPath();
-                ctx.moveTo(colBusX, gridStartY + 14);
+                ctx.moveTo(colBusX, gridStartY + 10);
                 ctx.lineTo(colBusX, cdsY);
                 ctx.stroke();
                 ctx.shadowBlur = 0;
 
-                // Animated Voltage Pulse traveling down Column Bus
-                if (isReadingCol) {
-                    const pulseY = gridStartY + activeRow * cellH + cellH * 0.7 +
-                        ((cdsY - (gridStartY + activeRow * cellH + cellH * 0.7)) * colPulseAnim);
-                    ctx.fillStyle = '#fef08a';
-                    ctx.beginPath();
-                    ctx.arc(colBusX, pulseY, 4.5, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-
-                // Bottom Block 1: Column CDS / Sample & Hold
-                const blockW = cellW - 14;
-                const blockX = gridStartX + c * cellW + 7;
+                const blockW = cellW - (isMobile ? 6 : 14);
+                const blockX = gridStartX + c * cellW + (isMobile ? 3 : 7);
 
                 ctx.fillStyle = phase === 'ROW_RESET' || phase === 'ROW_TRANSFER' ? 'rgba(251, 191, 36, 0.15)' : '#0f172a';
                 ctx.strokeStyle = phase === 'ROW_RESET' || phase === 'ROW_TRANSFER' ? '#fbbf24' : '#475569';
                 ctx.lineWidth = 1.5;
                 ctx.beginPath();
-                ctx.roundRect(blockX, cdsY, blockW, 26, 6);
+                ctx.roundRect(blockX, cdsY, blockW, isMobile ? 22 : 26, 5);
                 ctx.fill();
                 ctx.stroke();
 
                 ctx.fillStyle = '#fde68a';
-                ctx.font = 'bold 10px JetBrains Mono';
+                ctx.font = isMobile ? '9px JetBrains Mono' : 'bold 10px JetBrains Mono';
                 ctx.textAlign = 'center';
-                ctx.fillText('CDS / S&H', blockX + blockW / 2, cdsY + 16);
+                ctx.fillText('CDS', blockX + blockW / 2, cdsY + (isMobile ? 14 : 16));
 
-                // Connector from CDS to Column ADC
                 ctx.strokeStyle = phase === 'ROW_ADC' ? '#34d399' : '#475569';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
-                ctx.moveTo(blockX + blockW / 2, cdsY + 26);
+                ctx.moveTo(blockX + blockW / 2, cdsY + (isMobile ? 22 : 26));
                 ctx.lineTo(blockX + blockW / 2, adcY);
                 ctx.stroke();
 
-                // Bottom Block 2: Parallel Column ADC
                 ctx.fillStyle = phase === 'ROW_ADC' ? '#064e3b' : '#0f172a';
                 ctx.strokeStyle = phase === 'ROW_ADC' ? '#34d399' : '#475569';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
-                ctx.roundRect(blockX, adcY, blockW, 32, 7);
+                ctx.roundRect(blockX, adcY, blockW, isMobile ? 26 : 32, 6);
                 ctx.fill();
                 ctx.stroke();
 
                 ctx.fillStyle = phase === 'ROW_ADC' ? '#ecfdf5' : '#94a3b8';
-                ctx.font = 'bold 11px JetBrains Mono';
-                ctx.fillText(`ADC_${c}`, blockX + blockW / 2, adcY + 14);
-                ctx.font = '9px Cairo';
-                ctx.fillStyle = phase === 'ROW_ADC' ? '#6ee7b7' : '#64748b';
-                ctx.fillText(phase === 'ROW_ADC' ? 'تحويل متوازي!' : 'محول العمود', blockX + blockW / 2, adcY + 26);
+                ctx.font = isMobile ? 'bold 9px JetBrains Mono' : 'bold 11px JetBrains Mono';
+                ctx.fillText(`ADC_${c}`, blockX + blockW / 2, adcY + (isMobile ? 12 : 14));
+                if (!isMobile) {
+                    ctx.font = '9px Cairo';
+                    ctx.fillStyle = phase === 'ROW_ADC' ? '#6ee7b7' : '#64748b';
+                    ctx.fillText(phase === 'ROW_ADC' ? 'تحويل!' : 'محول', blockX + blockW / 2, adcY + 26);
+                }
             }
 
-            // Draw Rows, Horizontal Control Lines (SEL, RST, TX), and 4T-APS Pixels
             for (let r = 0; r < ROWS; r++) {
                 const rowY = gridStartY + r * cellH;
                 const isRowActive = (r === activeRow);
 
-                // Row Highlight Band
                 if (isRowActive) {
                     ctx.fillStyle = 'rgba(16, 185, 129, 0.06)';
-                    ctx.fillRect(gridStartX - 6, rowY - 2, gridTotalW + 12, cellH + 4);
+                    ctx.fillRect(gridStartX - 4, rowY - 2, gridTotalW + 8, cellH + 4);
                 }
 
-                // 3 Horizontal Row Control Lines (SEL, RST, TX) from Row Decoder across the entire row
                 const lineOffsets = [
-                    { name: 'SEL', yOff: cellH * 0.24, active: isRowActive && selActive, color: '#34d399' },
-                    { name: 'RST', yOff: cellH * 0.50, active: isRowActive && rstActive, color: '#fb7185' },
-                    { name: 'TX',  yOff: cellH * 0.76, active: isRowActive && txActive,  color: '#22d3ee' }
+                    { name: 'S', yOff: cellH * 0.24, active: isRowActive && selActive, color: '#34d399' },
+                    { name: 'R', yOff: cellH * 0.50, active: isRowActive && rstActive, color: '#fb7185' },
+                    { name: 'T', yOff: cellH * 0.76, active: isRowActive && txActive,  color: '#22d3ee' }
                 ];
 
                 lineOffsets.forEach(line => {
                     const ly = rowY + line.yOff;
+                    if (!isMobile) {
+                        ctx.fillStyle = line.active ? line.color : '#64748b';
+                        ctx.font = 'bold 9px JetBrains Mono';
+                        ctx.textAlign = 'right';
+                        ctx.fillText(`${line.name}[${r}]`, decoderX + decoderW - 4, ly + 3);
+                    }
 
-                    // Label inside Row Decoder
-                    ctx.fillStyle = line.active ? line.color : '#64748b';
-                    ctx.font = 'bold 10px JetBrains Mono';
-                    ctx.textAlign = 'right';
-                    ctx.fillText(`${line.name}[${r}]`, decoderX + decoderW - 8, ly + 3);
-
-                    // Horizontal Control Wire across all pixels in row
                     ctx.strokeStyle = line.active ? line.color : 'rgba(51, 65, 85, 0.45)';
                     ctx.lineWidth = line.active ? 2 : 1;
                     if (line.active) {
@@ -630,153 +592,89 @@
                     }
                     ctx.beginPath();
                     ctx.moveTo(decoderX + decoderW, ly);
-                    ctx.lineTo(gridStartX + gridTotalW - 14, ly);
+                    ctx.lineTo(gridStartX + gridTotalW - (isMobile ? 8 : 14), ly);
                     ctx.stroke();
                     ctx.shadowBlur = 0;
                 });
 
-                // Draw each 4T-APS Pixel Cell in this row
                 for (let c = 0; c < COLS; c++) {
                     const cellX = gridStartX + c * cellW;
                     const px = pixels[r][c];
-                    const colBusX = cellX + cellW - 14;
 
-                    // Pixel Outer Boundary
                     ctx.fillStyle = isRowActive ? 'rgba(15, 23, 42, 0.85)' : 'rgba(9, 13, 24, 0.85)';
                     ctx.strokeStyle = isRowActive ? 'rgba(52, 211, 153, 0.6)' : '#1e293b';
                     ctx.lineWidth = isRowActive ? 1.5 : 1;
                     ctx.beginPath();
-                    ctx.roundRect(cellX + 3, rowY + 3, cellW - 6, cellH - 6, 8);
+                    ctx.roundRect(cellX + 2, rowY + 2, cellW - 4, cellH - 4, 6);
                     ctx.fill();
                     ctx.stroke();
 
-                    // --- Inside Pixel: 4T-APS Components ---
-                    // 1. Photodiode (PD) Box on the Left-Bottom of Pixel
-                    const pdX = cellX + 10;
-                    const pdY = rowY + 14;
-                    const pdW = cellW * 0.40;
-                    const pdH = cellH - 28;
+                    const pdW = (cellW - 8) * 0.42;
+                    const pdH = (cellH - 8) * 0.75;
+                    const pdX = cellX + 5;
+                    const pdY = rowY + 5;
 
-                    ctx.fillStyle = '#061121';
-                    ctx.strokeStyle = px.pdCharge > 0 ? '#0284c7' : '#334155';
-                    ctx.lineWidth = 1.5;
-                    ctx.beginPath();
-                    ctx.roundRect(pdX, pdY, pdW, pdH, 6);
-                    ctx.fill();
-                    ctx.stroke();
+                    const fillRatio = px.pdCharge / 255;
+                    ctx.fillStyle = '#0f172a';
+                    ctx.fillRect(pdX, pdY, pdW, pdH);
 
-                    // Photodiode Charge Fill Level (Cyan glowing electrons)
-                    if (px.pdCharge > 0) {
-                        const fillRatio = px.pdCharge / 255;
-                        const fillH = (pdH - 4) * fillRatio;
-                        const grad = ctx.createLinearGradient(pdX, pdY + pdH - fillH, pdX, pdY + pdH);
-                        grad.addColorStop(0, 'rgba(34, 211, 238, 0.85)');
-                        grad.addColorStop(1, 'rgba(2, 132, 199, 0.45)');
-                        ctx.fillStyle = grad;
-                        ctx.beginPath();
-                        ctx.roundRect(pdX + 2, pdY + pdH - fillH - 2, pdW - 4, fillH, 4);
-                        ctx.fill();
+                    if (fillRatio > 0) {
+                        ctx.fillStyle = `rgba(34, 211, 238, ${0.3 + fillRatio * 0.7})`;
+                        ctx.fillRect(pdX, pdY + pdH * (1 - fillRatio), pdW, pdH * fillRatio);
+                    }
+                    ctx.strokeStyle = '#22d3ee';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(pdX, pdY, pdW, pdH);
+
+                    if (!isMobile) {
+                        ctx.fillStyle = '#22d3ee';
+                        ctx.font = '8px JetBrains Mono';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('PD', pdX + pdW / 2, pdY + pdH / 2 + 3);
                     }
 
-                    // PD Text & Value
-                    ctx.fillStyle = '#e0f2fe';
-                    ctx.font = 'bold 9px JetBrains Mono';
+                    const fdX = cellX + cellW * 0.52;
+                    const fdY = rowY + 6;
+                    const fdSize = Math.min(cellW * 0.38, cellH * 0.35);
+
+                    ctx.fillStyle = px.fdVoltage < 2.5 ? 'rgba(251, 191, 36, 0.35)' : '#0f172a';
+                    ctx.strokeStyle = '#fbbf24';
+                    ctx.lineWidth = 1.2;
+                    ctx.beginPath();
+                    ctx.arc(fdX + fdSize / 2, fdY + fdSize / 2, fdSize / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.font = isMobile ? '7px JetBrains Mono' : '8px JetBrains Mono';
                     ctx.textAlign = 'center';
-                    ctx.fillText('PD', pdX + pdW / 2, pdY + 11);
-                    ctx.font = '9px JetBrains Mono';
-                    ctx.fillStyle = px.pdCharge > 0 ? '#67e8f9' : '#475569';
-                    ctx.fillText(px.pdCharge > 0 ? px.pdCharge : '0', pdX + pdW / 2, pdY + pdH - 5);
-
-                    // 2. Transfer Gate (TX) Bridge between PD and FD
-                    const fdX = pdX + pdW + 14;
-                    const fdY = rowY + cellH * 0.35;
-                    const txActiveHere = isRowActive && txActive;
-
-                    ctx.strokeStyle = txActiveHere ? '#22d3ee' : '#334155';
-                    ctx.lineWidth = txActiveHere ? 3.5 : 2;
-                    ctx.beginPath();
-                    ctx.moveTo(pdX + pdW, fdY + 8);
-                    ctx.lineTo(fdX, fdY + 8);
-                    ctx.stroke();
-
-                    // TX Gate Symbol
-                    ctx.fillStyle = txActiveHere ? '#22d3ee' : '#475569';
-                    ctx.fillRect(pdX + pdW + 4, fdY + 1, 6, 4);
-
-                    // 3. Floating Diffusion (FD) Node
-                    const fdRadius = 9;
-                    ctx.fillStyle = px.fdCharge > 0 ? 'rgba(251, 191, 36, 0.25)' : '#0f172a';
-                    ctx.strokeStyle = (isRowActive && (rstActive || txActive)) ? '#fbbf24' : '#64748b';
-                    ctx.lineWidth = 1.5;
-                    ctx.beginPath();
-                    ctx.arc(fdX + fdRadius, fdY + 8, fdRadius, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.stroke();
-
-                    ctx.fillStyle = '#fde68a';
-                    ctx.font = 'bold 8px JetBrains Mono';
-                    ctx.fillText('FD', fdX + fdRadius, fdY + 11);
-
-                    // 4. Source Follower (SF) & Row Select (SEL) connecting FD to Column Bus
-                    const sfX = fdX + fdRadius * 2 + 4;
-                    const sfY = fdY + 8;
-                    const selActiveHere = isRowActive && selActive;
-
-                    // Wire from FD -> SF -> SEL -> Column Bitline
-                    ctx.strokeStyle = selActiveHere ? '#34d399' : '#334155';
-                    ctx.lineWidth = selActiveHere ? 2.5 : 1.2;
-                    ctx.beginPath();
-                    ctx.moveTo(fdX + fdRadius * 2, sfY);
-                    ctx.lineTo(colBusX, sfY);
-                    ctx.stroke();
-
-                    // Source Follower Amplifier Triangle Mini Icon
-                    ctx.fillStyle = selActiveHere ? '#10b981' : '#1e293b';
-                    ctx.beginPath();
-                    ctx.moveTo(sfX, sfY - 6);
-                    ctx.lineTo(sfX + 10, sfY);
-                    ctx.lineTo(sfX, sfY + 6);
-                    ctx.closePath();
-                    ctx.fill();
-
-                    // Connection Dot on Vertical Column Bitline
-                    ctx.fillStyle = selActiveHere ? '#fbbf24' : '#475569';
-                    ctx.beginPath();
-                    ctx.arc(colBusX, sfY, selActiveHere ? 4 : 2.5, 0, Math.PI * 2);
-                    ctx.fill();
-
-                    // Pixel Coordinate Micro Tag
-                    ctx.fillStyle = '#475569';
-                    ctx.font = '8px JetBrains Mono';
-                    ctx.textAlign = 'right';
-                    ctx.fillText(`(${r},${c})`, cellX + cellW - 20, rowY + cellH - 7);
+                    ctx.fillText('FD', fdX + fdSize / 2, fdY + fdSize / 2 + 3);
                 }
             }
         }
 
-        // Main Animation Loop
-        function loop(timestamp) {
-            const stepIntervals = [0, 1600, 1000, 600, 350, 180];
-            const currentInterval = stepIntervals[speedLevel];
+        // Animation Loop
+        function animate(timestamp) {
+            if (!lastTickTime) lastTickTime = timestamp;
+            const progress = timestamp - lastTickTime;
 
-            if (isPlaying && phase !== 'COMPLETE') {
-                if (timestamp - lastTickTime >= currentInterval) {
-                    stepSimulation();
-                    lastTickTime = timestamp;
-                }
+            const intervalMap = { 1: 1800, 2: 1200, 3: 800, 4: 500, 5: 300 };
+            const currentInterval = intervalMap[speedLevel] || 1200;
+
+            if (isPlaying && progress > currentInterval) {
+                stepSimulation();
+                lastTickTime = timestamp;
             }
 
-            // Animate analog pulse moving down column bitlines
-            if (activeRow >= 0 && selActive) {
-                colPulseAnim += 0.035;
-                if (colPulseAnim > 1) colPulseAnim = 0;
-            }
+            colPulseAnim += 0.04;
+            if (colPulseAnim > 1) colPulseAnim = 0;
 
+            resizeCanvas();
             drawSchematic();
-            requestAnimationFrame(loop);
+            requestAnimationFrame(animate);
         }
 
-        // Controls Listeners
+        // Event Listeners
         document.getElementById('playPauseBtn').addEventListener('click', () => {
             isPlaying = !isPlaying;
             document.getElementById('playIcon').textContent = isPlaying ? '⏸️' : '▶️';
@@ -794,21 +692,20 @@
 
         document.getElementById('resetBtn').addEventListener('click', () => {
             initSimulation();
-            isPlaying = true;
-            document.getElementById('playIcon').textContent = '⏸️';
-            document.getElementById('playText').textContent = 'إيقاف مؤقت';
         });
 
-        document.getElementById('speedSlider').addEventListener('input', (e) => {
+        const speedSlider = document.getElementById('speedSlider');
+        const speedLabels = { '1': 'بطيء جداً', '2': 'متوسط', '3': 'سريع', '4': 'سريع جداً', '5': 'توربو' };
+        speedSlider.addEventListener('input', (e) => {
             speedLevel = parseInt(e.target.value);
-            const names = ['', 'بطيء', 'متوسط', 'سريع', 'فائق', 'لحظي'];
-            document.getElementById('speedLabel').textContent = names[speedLevel];
+            document.getElementById('speedLabel').textContent = speedLabels[speedLevel];
         });
 
-        // Initialize
-        resizeCanvas();
-        initSimulation();
-        requestAnimationFrame(loop);
+        // Initialize on load
+        window.onload = () => {
+            initSimulation();
+            requestAnimationFrame(animate);
+        };
     </script>
 </body>
 </html>
