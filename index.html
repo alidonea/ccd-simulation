@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>منصة محاكاة حساسات الصور وتقنيات التحويل الرقمي</title>
     <style>
         :root {
@@ -21,20 +21,23 @@
             margin: 0;
             padding: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
             background-color: var(--bg-color);
             color: var(--text-main);
             min-height: 100vh;
+            min-height: 100dvh; /* دعم ارتفاع شاشات الموبايل الديناميكي */
             display: flex;
             flex-direction: column;
+            overflow-x: hidden;
         }
 
         header {
             background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
             border-bottom: 1px solid var(--border);
-            padding: 2.5rem 1rem;
+            padding: clamp(1.5rem, 5vw, 2.5rem) 1rem;
             text-align: center;
         }
 
@@ -43,14 +46,16 @@
             background: rgba(244, 63, 94, 0.12);
             border: 1px solid rgba(244, 63, 94, 0.35);
             color: #fda4af;
-            padding: 0.45rem 1.2rem;
+            padding: 0.4rem 1rem;
             border-radius: 50px;
-            font-size: 0.95rem;
-            margin-bottom: 1rem;
+            font-size: clamp(0.8rem, 2.5vw, 0.95rem);
+            margin-bottom: 0.85rem;
+            line-height: 1.4;
         }
 
         header h1 {
-            font-size: 2.2rem;
+            font-size: clamp(1.4rem, 5vw, 2.2rem);
+            line-height: 1.35;
             margin-bottom: 0.6rem;
             background: linear-gradient(to left, #fda4af, var(--primary), var(--secondary));
             -webkit-background-clip: text;
@@ -59,24 +64,29 @@
 
         header p {
             color: var(--text-muted);
-            font-size: 1.05rem;
+            font-size: clamp(0.9rem, 3vw, 1.05rem);
+            line-height: 1.5;
+            max-width: 650px;
+            margin: 0 auto;
         }
 
         .container {
+            width: 100%;
             max-width: 1200px;
             margin: 0 auto;
-            padding: 3rem 1.5rem;
+            padding: clamp(1.5rem, 4vw, 3rem) clamp(1rem, 3vw, 1.5rem);
             flex: 1;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 2rem;
+            /* تكييف العرض تلقائياً حتى للشاشات الضيقة جداً (280px) */
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+            gap: clamp(1.25rem, 3vw, 2rem);
         }
 
         .card {
             background-color: var(--card-bg);
             border: 1px solid var(--border);
             border-radius: 1rem;
-            padding: 2rem;
+            padding: clamp(1.25rem, 4vw, 2rem);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -95,37 +105,39 @@
             background: linear-gradient(to left, var(--primary), var(--secondary));
         }
 
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px -5px rgba(56, 189, 248, 0.2);
-            border-color: var(--primary);
+        @media (hover: hover) {
+            .card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 25px -5px rgba(56, 189, 248, 0.2);
+                border-color: var(--primary);
+            }
         }
 
         .card-content h3 {
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
+            font-size: clamp(1.25rem, 4vw, 1.5rem);
+            margin-bottom: 0.85rem;
             color: var(--text-main);
         }
 
         .card-content p {
             color: var(--text-muted);
             font-size: 0.95rem;
-            line-height: 1.6;
+            line-height: 1.65;
             margin-bottom: 1.5rem;
         }
 
         .tags {
             display: flex;
-            gap: 0.5rem;
+            gap: 0.45rem;
             flex-wrap: wrap;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.25rem;
         }
 
         .tag {
             background-color: rgba(56, 189, 248, 0.1);
             color: var(--primary);
             font-size: 0.75rem;
-            padding: 0.25rem 0.75rem;
+            padding: 0.25rem 0.7rem;
             border-radius: 50px;
             border: 1px solid rgba(56, 189, 248, 0.2);
         }
@@ -134,29 +146,33 @@
             background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
             color: #0f172a;
             border: none;
-            padding: 0.75rem 1.5rem;
+            padding: 0.85rem 1.25rem;
+            min-height: 48px; /* حجم لمس مثالي للموبايل */
+            width: 100%;
             font-size: 1rem;
             font-weight: bold;
-            border-radius: 0.5rem;
+            border-radius: 0.6rem;
             cursor: pointer;
-            transition: opacity 0.2s ease;
+            transition: opacity 0.2s ease, transform 0.1s ease;
             text-align: center;
             text-decoration: none;
-            display: inline-block;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .btn:hover {
-            opacity: 0.9;
+        .btn:active {
+            transform: scale(0.98);
         }
 
         /* نافذة العرض (Modal / Simulation View) */
         #sim-container {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
+            inset: 0;
             width: 100%;
             height: 100%;
+            height: 100dvh;
             background-color: var(--bg-color);
             z-index: 1000;
             flex-direction: column;
@@ -164,41 +180,69 @@
 
         .sim-header {
             background-color: var(--card-bg);
-            padding: 1rem 2rem;
+            padding: 0.75rem 1rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 0.75rem;
             border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        #sim-title {
+            color: var(--primary);
+            font-size: clamp(0.95rem, 3.5vw, 1.25rem);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .back-btn {
             background-color: var(--accent);
             color: white;
             border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 0.3rem;
+            padding: 0.55rem 0.9rem;
+            min-height: 40px;
+            border-radius: 0.4rem;
             cursor: pointer;
             font-weight: bold;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .sim-body {
             flex: 1;
             position: relative;
             background: #000;
+            overflow: hidden;
+            -webkit-overflow-scrolling: touch;
         }
 
         .sim-body iframe {
             width: 100%;
             height: 100%;
             border: none;
+            display: block;
         }
 
         footer {
             text-align: center;
-            padding: 1.5rem;
+            padding: 1.25rem 1rem;
             color: var(--text-muted);
             border-top: 1px solid var(--border);
-            font-size: 0.9rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        /* تخصيص إضافي للشاشات الصغيرة جداً */
+        @media (max-width: 480px) {
+            .sim-header {
+                padding: 0.65rem 0.75rem;
+            }
+            .back-btn span {
+                display: none; /* إخفاء النص الطويل وإبقاء كلمة مختصرة في الشاشات الضيقة */
+            }
         }
     </style>
 </head>
@@ -210,7 +254,7 @@
         <p>اختاري إحدى المحاكاة التفاعلية أدناه لاستكشاف آليات عمل الحساسات ومحولات الإشارة خطوة بخطوة</p>
     </header>
 
-    <div class="container">
+    <main class="container">
         <!-- البطاقة الأولى: CCD -->
         <div class="card">
             <div class="card-content">
@@ -252,7 +296,7 @@
             </div>
             <button class="btn" onclick="openSimulation('adc')">اختبار محاكاة ADCs</button>
         </div>
-    </div>
+    </main>
 
     <footer>
         صُمّم خصيصاً لكِ • منصة المحاكاة الهندسية التفاعلية 2026
@@ -261,11 +305,11 @@
     <!-- حاوية عرض المحاكاة المضمنة -->
     <div id="sim-container">
         <div class="sim-header">
-            <h2 id="sim-title" style="color: var(--primary);">العنوان</h2>
-            <button class="back-btn" onclick="closeSimulation()">العودة للقائمة الرئيسية ✕</button>
+            <h2 id="sim-title">العنوان</h2>
+            <button class="back-btn" onclick="closeSimulation()">رجوع <span>للقائمة</span> ✕</button>
         </div>
         <div class="sim-body">
-            <iframe id="sim-frame" src=""></iframe>
+            <iframe id="sim-frame" src="" title="نافذة المحاكاة"></iframe>
         </div>
     </div>
 
@@ -287,6 +331,8 @@
             }
 
             container.style.display = 'flex';
+            // منع تمرير الصفحة الخلفية أثناء فتح المحاكاة على الموبايل
+            document.body.style.overflow = 'hidden';
         }
 
         function closeSimulation() {
@@ -294,6 +340,8 @@
             const frame = document.getElementById('sim-frame');
             container.style.display = 'none';
             frame.src = '';
+            // إعادة تفعيل تمرير الصفحة
+            document.body.style.overflow = '';
         }
     </script>
 </body>
