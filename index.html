@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة محاكاة حساسات الصور وتقنيات التحويل الرقمي</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --primary: #38bdf8;
+            --secondary: #818cf8;
+            --accent: #f43f5e;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 2.5rem 1rem;
+            text-align: center;
+        }
+
+        .welcome-badge {
+            display: inline-block;
+            background: rgba(244, 63, 94, 0.12);
+            border: 1px solid rgba(244, 63, 94, 0.35);
+            color: #fda4af;
+            padding: 0.45rem 1.2rem;
+            border-radius: 50px;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+        }
+
+        header h1 {
+            font-size: 2.2rem;
+            margin-bottom: 0.6rem;
+            background: linear-gradient(to left, #fda4af, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.05rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(to left, var(--primary), var(--secondary));
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(56, 189, 248, 0.2);
+            border-color: var(--primary);
+        }
+
+        .card-content h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-main);
+        }
+
+        .card-content p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .tags {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+
+        .tag {
+            background-color: rgba(56, 189, 248, 0.1);
+            color: var(--primary);
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: #0f172a;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        /* نافذة العرض (Modal / Simulation View) */
+        #sim-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            z-index: 1000;
+            flex-direction: column;
+        }
+
+        .sim-header {
+            background-color: var(--card-bg);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .back-btn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.3rem;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .sim-body {
+            flex: 1;
+            position: relative;
+            background: #000;
+        }
+
+        .sim-body iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="welcome-badge">منصة محاكاة حساسات الصور وتقنيات التحويل الرقمي</div>
+        <h1>أهلاً حبيبتي زينب، ما الذي تريدين اختباره؟</h1>
+        <p>اختاري إحدى المحاكاة التفاعلية أدناه لاستكشاف آليات عمل الحساسات ومحولات الإشارة خطوة بخطوة</p>
+    </header>
+
+    <div class="container">
+        <!-- البطاقة الأولى: CCD -->
+        <div class="card">
+            <div class="card-content">
+                <h3>حساس CCD (نقل الشحنات)</h3>
+                <div class="tags">
+                    <span class="tag">MOS Capacitors</span>
+                    <span class="tag">3-Phase Clock</span>
+                    <span class="tag">Shift Registers</span>
+                </div>
+                <p>محاكاة تفاعلية بمنظور علوي توضح شبكة البكسلات، أسلاك خطوط الساعة الرأسية والأفقية، تغير جهود البوابات (+5V / 0V)، وانزياح حزم الشحنات نحو مضخم الخروج.</p>
+            </div>
+            <button class="btn" onclick="openSimulation('ccd')">اختبار محاكاة CCD</button>
+        </div>
+
+        <!-- البطاقة الثانية: CMOS -->
+        <div class="card">
+            <div class="card-content">
+                <h3>حساس CMOS النشط (4T-APS)</h3>
+                <div class="tags">
+                    <span class="tag">In-Pixel Amplifier</span>
+                    <span class="tag">Row Decoder</span>
+                    <span class="tag">Column ADCs</span>
+                </div>
+                <p>استكشاف معمارية البكسل النشط، العنونة المباشرة للصفوف، وقراءة الجهود التناظرية عبر نواقل الأعمدة ومحولات الإشارة المتوازية لحظياً.</p>
+            </div>
+            <button class="btn" onclick="openSimulation('cmos')">اختبار محاكاة CMOS</button>
+        </div>
+
+        <!-- البطاقة الثالثة: ADCs -->
+        <div class="card">
+            <div class="card-content">
+                <h3>محولات الإشارة (SAR, SS & Hybrid)</h3>
+                <div class="tags">
+                    <span class="tag">SAR ADC</span>
+                    <span class="tag">Single-Slope</span>
+                    <span class="tag">Hybrid Architecture</span>
+                </div>
+                <p>مقارنة حية بين معماريات التحويل التناظري الرقمي الثلاث من حيث سرعة إتمام دورات الساعة، مسجلات البتات، وتتبع جهد المنحدر.</p>
+            </div>
+            <button class="btn" onclick="openSimulation('adc')">اختبار محاكاة ADCs</button>
+        </div>
+    </div>
+
+    <footer>
+        صُمّم خصيصاً لكِ • منصة المحاكاة الهندسية التفاعلية 2026
+    </footer>
+
+    <!-- حاوية عرض المحاكاة المضمنة -->
+    <div id="sim-container">
+        <div class="sim-header">
+            <h2 id="sim-title" style="color: var(--primary);">العنوان</h2>
+            <button class="back-btn" onclick="closeSimulation()">العودة للقائمة الرئيسية ✕</button>
+        </div>
+        <div class="sim-body">
+            <iframe id="sim-frame" src=""></iframe>
+        </div>
+    </div>
+
+    <script>
+        function openSimulation(type) {
+            const container = document.getElementById('sim-container');
+            const frame = document.getElementById('sim-frame');
+            const title = document.getElementById('sim-title');
+
+            if (type === 'ccd') {
+                title.textContent = 'محاكاة حساس CCD وخطوط الساعة';
+                frame.src = 'ccd.html'; 
+            } else if (type === 'cmos') {
+                title.textContent = 'محاكاة حساس CMOS (4T-APS)';
+                frame.src = 'cmos.html';
+            } else if (type === 'adc') {
+                title.textContent = 'محاكاة معماريات محولات الإشارة (ADC)';
+                frame.src = 'adc.html';
+            }
+
+            container.style.display = 'flex';
+        }
+
+        function closeSimulation() {
+            const container = document.getElementById('sim-container');
+            const frame = document.getElementById('sim-frame');
+            container.style.display = 'none';
+            frame.src = '';
+        }
+    </script>
+</body>
+</html>
